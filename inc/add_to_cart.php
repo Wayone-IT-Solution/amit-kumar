@@ -2,6 +2,10 @@
 session_start();
 require 'db.php';
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 $productId   = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
 $quantity    = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 0;
 $boxId       = $_POST['box_id'] ?? 'none';
@@ -11,6 +15,7 @@ $isGuest     = isset($_POST['as_guest']) && $_POST['as_guest'] == 1;
 
 // Not logged in check
 if (!isset($_SESSION['user_id']) && !$isGuest) {
+    error_log('Add to cart: not_logged_in');
     echo 'not_logged_in';
     exit;
 }
@@ -26,6 +31,7 @@ if ($productId > 0 && $quantity > 0) {
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$product) {
+        error_log('Add to cart: Product not found for product_id=' . $productId);
         echo "Product not found.";
         exit;
     }
@@ -64,6 +70,7 @@ if ($productId > 0 && $quantity > 0) {
         $box = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$box) {
+            error_log('Add to cart: Box not found for box_id=' . $boxId);
             echo "Box not found.";
             exit;
         }
@@ -116,5 +123,6 @@ if ($productId > 0 && $quantity > 0) {
 
     echo "success";
 } else {
+    error_log('Add to cart: Invalid request. product_id=' . $productId . ', quantity=' . $quantity);
     echo "Invalid request.";
 }

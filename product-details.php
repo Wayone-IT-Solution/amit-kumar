@@ -30,7 +30,6 @@ session_start();
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 
 <!-- SweetAlert2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <!-- Main CSS File -->
   <link href="assets/css/main.css" rel="stylesheet">
@@ -1202,7 +1201,6 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
 <script src="assets/js/main.js"></script>
 
 <!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 document.querySelectorAll('.add-to-cart-btn').forEach(function(addToCartBtn) {
