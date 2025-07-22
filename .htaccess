@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Redirect .php to clean URL
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/(.+)\.php\sHTTP
+RewriteRule ^(.+)\.php$ /$1 [R=301,L]
+
+# Internally serve .php for extensionless URL
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L]
