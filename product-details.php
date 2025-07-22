@@ -1,7 +1,6 @@
 <?php
 session_start();
-error_reporting(0);
-ini_set('display_errors', 0); 
+
 
 ?>
 <!DOCTYPE html>
@@ -753,9 +752,6 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <input type="hidden" name="box_price" id="modal_box_price">
 <input type="hidden" name="custom_box_text" id="modal_custom_box_text">
 <input type="hidden" name="box_image" id="modal_box_image">
-
-
-
 <input type="hidden" name="quantity" id="modal_quantity" value="1">
 <input type="hidden" name="box_qty" id="modal_number_of_boxes" value="1">
         <div class="mb-3">
@@ -784,18 +780,18 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php endforeach; ?>
         </div>
          
-<!-- calender -->
-<div class="mb-3">
-    <label class="form-label small">Delivery Date</label>
+        <!-- calender -->
+      <div class="mb-3">
+          <label class="form-label small">Delivery Date</label>
 
-  <input
-    type="text"
-    class="form-control border-0 rounded-3"
-    name="delivery_date"
-    id="delivery_date"
-    required
-    placeholder="Select a date">
-</div>
+        <input
+          type="text"
+          class="form-control border-0 rounded-3"
+          name="delivery_date"
+          id="delivery_date"
+          required
+          placeholder="Select a date">
+      </div>
 
 <div class="mb-4">
   <label class="form-label small">Delivery Time</label>
@@ -905,12 +901,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<style>
-.blocked-date {
-    font-weight: bold;
-    text-decoration: line-through;
-}
-</style>
+      <style>
+      .blocked-date {
+          font-weight: bold;
+          text-decoration: line-through;
+      }
+      </style>
         <!-- Receiver Info -->
         <div class="mb-3">
           <label class="form-label small">Receiver's Name</label>
@@ -1034,10 +1030,6 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
 
 <script>
 console.log('Script starting...');
-
-
-      
-
 let customBoxText = '';
 let isBuyNow = false;
 let buyNowProductId = null;
@@ -1433,9 +1425,8 @@ function showBoxPopup(boxes) {
           }
         };
       }, 100);
-    });
-  });
-}
+    }
+
 
 // Test if we can find the button
 setTimeout(() => {
