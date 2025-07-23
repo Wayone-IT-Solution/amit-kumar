@@ -9,8 +9,7 @@
             <img src="assets/img/footer-logo.png" alt="">
           </a>
           <div class="footer-contact">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut </p>
-            
+<p>At Amit Dairy & Sweets, we blend tradition with taste to bring you the finest sweets and dairy products.</p>            
           </div>
           <div class="social-links d-flex mt-4">
             <a href="<?= htmlspecialchars($contact['twitter'] ?? '') ?>"><i class="bi bi-twitter-x"></i></a>

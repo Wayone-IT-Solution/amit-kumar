@@ -44,20 +44,17 @@ try {
   // Define the function both ways to ensure it's available
   function testBuyNowClick(button) {
     console.log('Buy Now button clicked!');
-    
     const productId = button.dataset.productId;
     const categoryId = button.dataset.categoryId;
-    const price = parseFloat(button.dataset.price || 0);
-    
-    console.log('Product ID:', productId, 'Category ID:', categoryId, 'Price:', price);
-    
-    // Set global variables
+    // Use discounted price for calculation
+    const price = parseFloat(button.dataset.productDiscountPrice || button.dataset.price || 0);
+    // Always get the latest quantity from the main input
+    let qtyInput = document.querySelector('.qty-val');
+    let selectedQty = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
     window.isBuyNow = true;
     window.buyNowProductId = productId;
     window.customBoxText = '';
-    window.buyNowQty = 1;
-
-    // Fetch minimum order amount and boxes
+    window.buyNowQty = selectedQty;
     Promise.all([
       fetch('inc/fetch_settings.php?type=min_order').then(res => res.json()).catch(() => ({ min_order_amount: 1500 })),
       fetch('inc/fetch_boxes', {
@@ -67,86 +64,37 @@ try {
       }).then(res => res.json()).catch(() => [])
     ])
     .then(([settings, boxes]) => {
-      console.log('Settings:', settings, 'Boxes:', boxes);
       const minAmount = parseFloat(settings.min_order_amount || 1500);
       const productPrice = price;
-      
-      // Check if current order meets minimum amount
-      const currentTotal = productPrice * window.buyNowQty;
-      
+      // Always recalculate with latest quantity
+      const currentTotal = productPrice * selectedQty;
       if (currentTotal < minAmount) {
-        // Show quantity adjustment popup
         Swal.fire({
-          icon: 'warning',
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
           title: 'Minimum Order Amount Required',
-          html: `
-            <div style="margin-bottom:10px;">
-              Your order total is ₹<span id='swalTotal'>${currentTotal.toFixed(2)}</span>.<br>
-              Minimum order amount is ₹${minAmount.toFixed(2)}.
-            </div>
-            <p>Please increase quantity to meet the minimum order amount.</p>
-            <div class="d-flex justify-content-center align-items-center mb-3">
-              <button type="button" id="decQtyBtn" class="btn btn-outline-secondary px-3 me-2">−</button>
-              <input type="number" id="newQtyInput" class="form-control text-center" value="${window.buyNowQty}" min="1" style="width: 80px;">
-              <button type="button" id="incQtyBtn" class="btn btn-outline-secondary px-3 ms-2">+</button>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: 'Continue',
-          cancelButtonText: 'Cancel',
-          customClass: {
-            confirmButton: 'btn btn-warning me-3',
-            cancelButton: 'btn btn-secondary'
-          },
-          buttonsStyling: false,
-          didOpen: () => {
-            const input = document.getElementById('newQtyInput');
-            const incBtn = document.getElementById('incQtyBtn');
-            const decBtn = document.getElementById('decQtyBtn');
-            const totalSpan = document.getElementById('swalTotal');
-            
-            incBtn.addEventListener('click', () => {
-              input.value = parseInt(input.value) + 1;
-              totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-            });
-            
-            decBtn.addEventListener('click', () => {
-              if (parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-                totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-              }
-            });
-            
-            input.addEventListener('input', () => {
-              let val = parseInt(input.value) || 1;
-              if (val < 1) val = 1;
-              input.value = val;
-              totalSpan.textContent = (val * productPrice).toFixed(2);
-            });
-          },
-          preConfirm: () => {
-            const newQty = parseInt(document.getElementById('newQtyInput').value);
-            if (!newQty || newQty < 1) {
-              Swal.showValidationMessage('Please enter a valid quantity');
-              return false;
-            }
-            if (newQty * productPrice < minAmount) {
-              Swal.showValidationMessage(`Total must be at least ₹${minAmount.toFixed(2)}`);
-              return false;
-            }
-            return newQty;
-          }
-        }).then(result => {
-          if (result.isConfirmed && result.value) {
-            window.buyNowQty = result.value;
-            window.buyNowProductQty = result.value; // Save as product quantity
-            window.buyNowBoxQty = 1; // Default box quantity
-            showBoxPopup(boxes);
-          }
+          html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity increased`,
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          customClass: { popup: 'sms-toast' }
         });
-      } else {
-        showBoxPopup(boxes);
+        return;
       }
+      // Show congratulation toast
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Congratulations! Minimum order amount met.',
+        html: `Your order total is ₹${currentTotal.toFixed(2)}.`,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        customClass: { popup: 'sms-toast-success' }
+      });
+      setTimeout(() => showBoxPopup(boxes), 1200);
     })
     .catch(error => {
       console.error('Error:', error);
@@ -179,15 +127,14 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Buy Now button clicked (fallback)!');
       const productId = button.dataset.productId;
       const categoryId = button.dataset.categoryId;
-      const price = parseFloat(button.dataset.price || 0);
-      
-      // Set global variables
+      // Use discounted price for calculation
+      const price = parseFloat(button.dataset.productDiscountPrice || button.dataset.price || 0);
+      let qtyInput = document.querySelector('.qty-val');
+      let selectedQty = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
       window.isBuyNow = true;
       window.buyNowProductId = productId;
       window.customBoxText = '';
-      window.buyNowQty = 1;
-
-      // Fetch minimum order amount and boxes
+      window.buyNowQty = selectedQty;
       Promise.all([
         fetch('inc/fetch_settings.php?type=min_order').then(res => res.json()).catch(() => ({ min_order_amount: 1500 })),
         fetch('inc/fetch_boxes', {
@@ -197,91 +144,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }).then(res => res.json()).catch(() => [])
       ])
       .then(([settings, boxes]) => {
-        console.log('Settings:', settings, 'Boxes:', boxes);
         const minAmount = parseFloat(settings.min_order_amount || 1500);
         const productPrice = price;
-        
-        // Check if current order meets minimum amount
-        const currentTotal = productPrice * window.buyNowQty;
-        
+        const currentTotal = productPrice * selectedQty;
         if (currentTotal < minAmount) {
-          // Show quantity adjustment popup
           Swal.fire({
-            icon: 'warning',
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
             title: 'Minimum Order Amount Required',
-            html: `
-              <div style="margin-bottom:10px;">
-                Your order total is ₹<span id='swalTotal'>${currentTotal.toFixed(2)}</span>.<br>
-                Minimum order amount is ₹${minAmount.toFixed(2)}.
-              </div>
-              <p>Please increase quantity to meet the minimum order amount.</p>
-              <div class="d-flex justify-content-center align-items-center mb-3">
-                <button type="button" id="decQtyBtn" class="btn btn-outline-secondary px-3 me-2">−</button>
-                <input type="number" id="newQtyInput" class="form-control text-center" value="${window.buyNowQty}" min="1" style="width: 80px;">
-                <button type="button" id="incQtyBtn" class="btn btn-outline-secondary px-3 ms-2">+</button>
-              </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Continue',
-            cancelButtonText: 'Cancel',
-            customClass: {
-              confirmButton: 'btn btn-warning me-3',
-              cancelButton: 'btn btn-secondary'
-            },
-            buttonsStyling: false,
-            didOpen: () => {
-              const input = document.getElementById('newQtyInput');
-              const incBtn = document.getElementById('incQtyBtn');
-              const decBtn = document.getElementById('decQtyBtn');
-              const totalSpan = document.getElementById('swalTotal');
-              
-              incBtn.addEventListener('click', () => {
-                input.value = parseInt(input.value) + 1;
-                totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-              });
-              
-              decBtn.addEventListener('click', () => {
-                if (parseInt(input.value) > 1) {
-                  input.value = parseInt(input.value) - 1;
-                  totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-                }
-              });
-              
-              input.addEventListener('input', () => {
-                let val = parseInt(input.value) || 1;
-                if (val < 1) val = 1;
-                input.value = val;
-                totalSpan.textContent = (val * productPrice).toFixed(2);
-              });
-            },
-            preConfirm: () => {
-              const newQty = parseInt(document.getElementById('newQtyInput').value);
-              if (!newQty || newQty < 1) {
-                Swal.showValidationMessage('Please enter a valid quantity');
-                return false;
-              }
-              if (newQty * productPrice < minAmount) {
-                Swal.showValidationMessage(`Total must be at least ₹${minAmount.toFixed(2)}`);
-                return false;
-              }
-              return newQty;
-            }
-          }).then(result => {
-            if (result.isConfirmed && result.value) {
-              window.buyNowQty = result.value;
-              window.buyNowProductQty = result.value; // Save as product quantity
-              window.buyNowBoxQty = 1; // Default box quantity
-              showBoxPopup(boxes);
-            }
+            html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity increased!`,
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+            customClass: { popup: 'sms-toast' }
           });
-        } else {
-          window.buyNowProductQty = window.buyNowQty; // Set product quantity when no minimum check needed
-          window.buyNowBoxQty = 1; // Default box quantity
-          showBoxPopup(boxes);
+          return;
         }
+        showBoxPopup(boxes);
       })
       .catch(error => {
-        console.error('Error:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -302,6 +184,10 @@ window.addEventListener('load', function() {
 
   <!-- Main CSS File -->
   <link href="assets/css/main.css" rel="stylesheet">
+
++<script>
++window.productWeightType = <?= isset($product['weight_type']) ? json_encode(strtolower($product['weight_type'])) : 'null' ?>;
++</script>
 
 </head>
 
@@ -372,40 +258,67 @@ try {
       </div>
       <div class="col-lg-6">
         <div class="product-info">
-          <h2 style="display: flex; align-items: center; justify-content: space-between;">
-  
-</h2>
-
           <h2><?= htmlspecialchars($product['name']) ?></h2>
-
           <div class="product-spec mb-3">
             <h4>Product Code: <?= htmlspecialchars($product['product_code']) ?></h4>
             <h4>Price: <del>₹<?= htmlspecialchars($product['price']) ?></del></h4>
-            <h4>Discounted Price: ₹<?= htmlspecialchars($product['discount_price']) ?></h4>
+            <h4>Discounted Price: ₹<span class="dynamic-price"><?= htmlspecialchars($product['discount_price']) ?></span></h4>
             <h4>
-            Quantity: <?= htmlspecialchars($product['weight']) ?><?= !empty($product['weight_type']) ? ' (' . htmlspecialchars($product['weight_type']) . ')' : '' ?>
-          </h4>
-
+              Quantity: <?= htmlspecialchars($product['weight']) ?><?= !empty($product['weight_type']) ? ' (' . htmlspecialchars($product['weight_type']) . ')' : '' ?>
+            </h4>
             <h4>Category: <?= htmlspecialchars($categoryName) ?></h4>
           </div>
-
           <p><?= nl2br(htmlspecialchars($product['description'])) ?></p>
-        </div>
+          <!-- Quantity Box and Type Dropdown in one row -->
+      <div class="d-flex align-items-start mb-3 gap-3 flex-wrap">
+  <!-- Quantity Box -->
+  <div class="qty-box d-flex align-items-center">
+    <button class="btn btn-sm p-0 border-0 minus-btn">−</button>
+    <input type="number"
+      class="qty-val mx-2"
+      value="1"
+      min="1"
+      max="99"
+      style="width: 40px; border: none; text-align: center;"
+      data-min="1"
+      data-max="99"
+    >
+    <button class="btn btn-sm p-0 border-0 plus-btn">+</button>
+  </div>
 
-        <div class="container d-flex gap-4 mt-4 px-0">
-          <button class="btn-heritage btn-primary add-to-cart-btn" data-product-id="<?php echo $product['id']; ?>" 
-          data-category-id="<?php echo $product['category_id']; ?>">
-            <i class="bi bi-cart-plus me-2"></i>Add to Cart
-          </button>
-          <button 
-            type="button" 
-            class="btn-heritage btn-success buy-now-btn" 
-            data-product-id="<?= $product['id']; ?>" 
-            data-category-id="<?= $product['category_id']; ?>"
-            data-price="<?= $product['discount_price']; ?>"
-            onclick="if(typeof testBuyNowClick === 'function') { testBuyNowClick(this); } else { console.error('Function not found'); alert('Buy Now function not loaded. Please refresh the page.'); }">
-            <i class="bi bi-lightning me-2"></i>Buy Now
-          </button>
+  <!-- Type Dropdown (Matching Design) -->
+  <?php if (!empty($product['types'])): ?>
+    <?php $typesArr = array_filter(array_map('trim', explode(',', $product['types']))); ?>
+    <div class="type-box d-flex align-items-center">
+      <select class="form-select form-select-sm type-select" 
+              style="width: 100px; height: 32px; padding: 2px 6px; font-size: 0.875rem;">
+        <?php foreach ($typesArr as $type): ?>
+          <option value="<?= (int)$type ?>">
+            <?= (int)$type ?> gram<?= ((int)$type == 1000) ? ' (1kg)' : '' ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  <?php endif; ?>
+</div>
+
+
+          <div class="container d-flex gap-4 mt-4 px-0">
+            <button class="btn-heritage btn-primary add-to-cart-btn" data-product-id="<?= $product['id']; ?>"
+              data-category-id="<?= $product['category_id']; ?>"
+              data-product-discount-price="<?= htmlspecialchars($product['discount_price']) ?>"
+              data-product-weight="<?= htmlspecialchars($product['weight']) ?>">
+              <i class="bi bi-cart-plus me-2"></i>Add to Cart
+            </button>
+            <button type="button" class="btn-heritage btn-success buy-now-btn"
+              data-product-id="<?= $product['id']; ?>"
+              data-category-id="<?= $product['category_id']; ?>"
+              data-product-discount-price="<?= htmlspecialchars($product['discount_price']) ?>"
+              data-product-weight="<?= htmlspecialchars($product['weight']) ?>"
+              onclick="if(typeof testBuyNowClick === 'function') { testBuyNowClick(this); } else { console.error('Function not found'); alert('Buy Now function not loaded. Please refresh the page.'); }">
+              <i class="bi bi-lightning me-2"></i>Buy Now
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -735,7 +648,6 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <input type="hidden" id="modal_box_image" name="box_image">
       <input type="hidden" id="modal_custom_box_text" name="custom_box_text">
       <input type="hidden" id="modal_quantity" name="quantity">
-      <input type="hidden" name="box_qty" id="modal_number_of_boxes" value="1">
       <!-- Remove all payment method radio buttons and their labels from the modal form -->
 
       <div class="modal-body p-0">
@@ -748,11 +660,9 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
           </div>
         </div>
-        <input type="hidden" name="box_name" id="modal_box_name">
-<input type="hidden" name="box_price" id="modal_box_price">
-<input type="hidden" name="custom_box_text" id="modal_custom_box_text">
-<input type="hidden" name="box_image" id="modal_box_image">
-<input type="hidden" name="quantity" id="modal_quantity" value="1">
+        
+
+
 <input type="hidden" name="box_qty" id="modal_number_of_boxes" value="1">
         <div class="mb-3">
           <input type="text" class="form-control border-0 rounded-3" name="address_details" placeholder="Add Detailed Address" required>
@@ -940,69 +850,58 @@ document.getElementById('placeOrderForm').addEventListener('submit', function (e
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 
-  const quantityInput = document.getElementById('modal_quantity');
-  const boxInput = document.getElementById('modal_number_of_boxes');
-  const currentQty = parseInt(quantityInput.value) || 1;
-  const currentBoxes = parseInt(boxInput.value) || 1;
+  // Prevent duplicate fetch
+  if (window.orderSubmitting) return;
+  window.orderSubmitting = true;
 
-  const formData = new FormData(form);
-  console.log('Payment method:', formData.get('payment_method'));
-  console.log('Form data entries:');
-  for (let [key, value] of formData.entries()) {
-    console.log(key + ': ' + value);
-  }
+  // form.style.display = 'none'; // Remove this from here!
 
-  fetch('inc/place_order', {
-    method: 'POST',
-    body: formData
-  })
-    .then(res => {
-      console.log('Response status: 825', res.status);
-      return res.json();
+  setTimeout(() => {
+    const quantityInput = document.getElementById('modal_quantity');
+    const boxInput = document.getElementById('modal_number_of_boxes');
+    const currentQty = parseInt(quantityInput.value) || 1;
+    const currentBoxes = parseInt(boxInput.value) || 1;
+
+    const formData = new FormData(form);
+
+    fetch('inc/place_order', {
+      method: 'POST',
+      body: formData
     })
-    .then(data => {
-      console.log('Response data:', data);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnText;
-      if (data.success) {
-        console.log('Payment redirect URL:', data.payment_redirect);
-        if (data.payment_redirect) {
-          // Redirect to payment gateway
-          Swal.fire({
-            icon: 'info',
-            title: 'Payment Required',
-            text: data.message,
-            confirmButtonText: 'Proceed to Payment',
-            allowOutsideClick: false
-          }).then(() => {
-            console.log('Redirecting to:', data.payment_redirect);
-            window.location.href = data.payment_redirect;
-          });
-        } else {
-          // COD or wallet payment completed
+      .then(res => res.json())
+      .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        window.orderSubmitting = false;
+        if (data.success) {
           Swal.fire({
             icon: 'success',
             title: 'Order Placed!',
-            html: `<p>${data.message}</p><strong>Delivery: Within 2 days</strong>`,
-            confirmButtonText: 'OK',
-            timer: 4000,
-            timerProgressBar: true,
-          }).then(() => {
-            // Redirect to cart
-            window.location.href = 'cart?payment=success&order_code=' + data.order_code + '&amount=' + data.subtotal;
+            html: `<p>Your order has been placed successfully!</p><strong>Order Code: ${data.order_code || ''}</strong><br>Delivery: Within 2 days`,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true
           });
+          setTimeout(() => {
+            form.style.display = 'none';
+            window.location.href = 'index';
+          }, 1800);
+          return;
         }
-      }
-    })
-    .catch(err => {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnText;
-      Swal.fire({
-        icon: 'error',
-        title: 'Request Failed',
-        text: err.message || 'Something went wrong.',
+      })
+      .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        window.orderSubmitting = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Request Failed',
+          text: err.message || 'Something went wrong.',
+        });
       });
-    });
+  }, 1000);
 });
 
 // Payment method selection for Buy Now
@@ -1126,76 +1025,19 @@ function handleBuyNowClick(e) {
     if (currentTotal < minAmount) {
       // Show quantity adjustment popup
       Swal.fire({
-        icon: 'warning',
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
         title: 'Minimum Order Amount Required',
-        html: `
-          <div style="margin-bottom:10px;">
-            Your order total is ₹<span id='swalTotal'>${currentTotal.toFixed(2)}</span>.<br>
-            Minimum order amount is ₹${minAmount.toFixed(2)}.
-          </div>
-          <p>Please increase quantity to meet the minimum order amount.</p>
-          <div class="d-flex justify-content-center align-items-center mb-3">
-            <button type="button" id="decQtyBtn" class="btn btn-outline-secondary px-3 me-2">−</button>
-            <input type="number" id="newQtyInput" class="form-control text-center" value="${buyNowQty}" min="1" style="width: 80px;">
-            <button type="button" id="incQtyBtn" class="btn btn-outline-secondary px-3 ms-2">+</button>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Continue',
-        cancelButtonText: 'Cancel',
-        customClass: {
-          confirmButton: 'btn btn-warning',
-          cancelButton: 'btn btn-secondary'
-        },
-        buttonsStyling: false,
-        didOpen: () => {
-          const input = document.getElementById('newQtyInput');
-          const incBtn = document.getElementById('incQtyBtn');
-          const decBtn = document.getElementById('decQtyBtn');
-          const totalSpan = document.getElementById('swalTotal');
-          
-          incBtn.addEventListener('click', () => {
-            input.value = parseInt(input.value) + 1;
-            totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-          });
-          
-          decBtn.addEventListener('click', () => {
-            if (parseInt(input.value) > 1) {
-              input.value = parseInt(input.value) - 1;
-              totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-            }
-          });
-          
-          input.addEventListener('input', () => {
-            let val = parseInt(input.value) || 1;
-            if (val < 1) val = 1;
-            input.value = val;
-            totalSpan.textContent = (val * productPrice).toFixed(2);
-          });
-        },
-        preConfirm: () => {
-          const newQty = parseInt(document.getElementById('newQtyInput').value);
-          if (!newQty || newQty < 1) {
-            Swal.showValidationMessage('Please enter a valid quantity');
-            return false;
-          }
-          if (newQty * productPrice < minAmount) {
-            Swal.showValidationMessage(`Total must be at least ₹${minAmount.toFixed(2)}`);
-            return false;
-          }
-          return newQty;
-        }
-      }).then(result => {
-        if (result.isConfirmed && result.value) {
-          window.buyNowQty = result.value;
-          window.buyNowProductQty = result.value; // Save as product quantity
-          window.buyNowBoxQty = 1; // Default box quantity
-          showBoxPopup(boxes);
-        }
+        html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity Increased!`,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        customClass: { popup: 'sms-toast' }
       });
-    } else {
-      showBoxPopup(boxes);
+      return;
     }
+    showBoxPopup(boxes);
   })
   .catch(error => {
     console.error('Error:', error);
@@ -1368,7 +1210,7 @@ function showBoxPopup(boxes) {
                    return;
                  }
                 
-                buyNowQty = qtyVal;
+                window.buyNowBoxQty = qtyVal;
                 document.getElementById('confirmBoxBtn').disabled = false;
                 qtyModalInstance.hide();
                 document.body.removeChild(qtyModal);
@@ -1380,7 +1222,7 @@ function showBoxPopup(boxes) {
                 }
                 option.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
                 selectedBoxId = null;
-                buyNowQty = 1;
+                window.buyNowBoxQty = 1;
                 document.getElementById('confirmBoxBtn').disabled = true;
               });
             }
@@ -1392,14 +1234,20 @@ function showBoxPopup(boxes) {
             window.buyNowBoxId = selectedBoxId;
             modal.hide();
             setTimeout(() => {
+              // Always get product quantity from main input or buyNowProductQty
+              let productQty = window.buyNowProductQty || 1;
+              const qtyInput = document.querySelector('.qty-val');
+              if (qtyInput) {
+                productQty = parseInt(qtyInput.value, 10) || 1;
+              }
               document.getElementById('modal_product_id').value = window.buyNowProductId;
               document.getElementById('modal_box_id').value = window.buyNowBoxId;
               document.getElementById('modal_box_name').value = window.selectedBoxName;
               document.getElementById('modal_box_price').value = window.selectedBoxPrice;
               document.getElementById('modal_box_image').value = window.selectedBoxImage;
               document.getElementById('modal_custom_box_text').value = window.customBoxText || '';
-              document.getElementById('modal_quantity').value = window.buyNowProductQty || window.buyNowQty;
-              document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Do not use || 1
+              document.getElementById('modal_quantity').value = productQty;
+              document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Only box quantity
               // Always show the checkout modal
               const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
               checkoutModal.show();
@@ -1411,7 +1259,7 @@ function showBoxPopup(boxes) {
           if (window.isBuyNow) {
             window.buyNowBoxId = 'none';
             customBoxText = '';
-            buyNowQty = 1;
+            window.buyNowBoxQty = 1;
             modal.hide();
 
             setTimeout(() => {
@@ -1612,19 +1460,52 @@ document.querySelectorAll('.add-to-cart-btn').forEach(function(addToCartBtn) {
         });
 
         document.getElementById('confirmBoxBtn').onclick = () => {
-          submitToCart(productId, selectedQty, selectedBoxId, modal, customBoxText, selectedQty, selectedBoxName, selectedBoxPrice);
+          // Get selected type/gram from dropdown if present
+          let selectedType = 1000;
+          const typeSelect = document.querySelector('.type-select');
+          let isUnit = false;
+          if (typeof window.productWeightType !== 'undefined' && window.productWeightType === 'unit') {
+            isUnit = true;
+          } else if (typeSelect && typeSelect.options.length === 1 && typeSelect.options[0].text.toLowerCase().includes('unit')) {
+            isUnit = true;
+          }
+          if (isUnit) selectedType = 1;
+          else if (typeSelect) selectedType = parseInt(typeSelect.value, 10) || 1000;
+          // Get product quantity from the main input
+          let productQty = 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
+          submitToCart(productId, productQty, selectedBoxId, modal, customBoxText, selectedQty, selectedBoxName, selectedBoxPrice, selectedType);
         };
 
         document.getElementById('skipBoxBtn').onclick = () => {
-          submitToCart(productId, 1, 'none', modal, '', 0, '', 0);
+          let selectedType = 1000;
+          const typeSelect = document.querySelector('.type-select');
+          let isUnit = false;
+          if (typeof window.productWeightType !== 'undefined' && window.productWeightType === 'unit') {
+            isUnit = true;
+          } else if (typeSelect && typeSelect.options.length === 1 && typeSelect.options[0].text.toLowerCase().includes('unit')) {
+            isUnit = true;
+          }
+          if (isUnit) selectedType = 1;
+          else if (typeSelect) selectedType = parseInt(typeSelect.value, 10) || 1000;
+          // Get product quantity from the main input
+          let productQty = 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
+          submitToCart(productId, productQty, 'none', modal, '', 0, '', 0, selectedType);
         };
       }, 100);
     });
   });
 });
 
-function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0) {
-  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}`;
+function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0, selectedType = 1000) {
+  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}&selected_type=${selectedType}`;
     
   fetch('inc/add_to_cart', {
     method: 'POST',
@@ -1714,69 +1595,58 @@ document.getElementById('placeOrderForm').addEventListener('submit', function (e
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 
-  const quantityInput = document.getElementById('modal_quantity');
-  const boxInput = document.getElementById('modal_number_of_boxes');
-  const currentQty = parseInt(quantityInput.value) || 1;
-  const currentBoxes = parseInt(boxInput.value) || 1;
+  // Prevent duplicate fetch
+  if (window.orderSubmitting) return;
+  window.orderSubmitting = true;
 
-  const formData = new FormData(form);
-  console.log('Payment method:', formData.get('payment_method'));
-  console.log('Form data entries:');
-  for (let [key, value] of formData.entries()) {
-    console.log(key + ': ' + value);
-  }
+  // form.style.display = 'none'; // Remove this from here!
 
-  fetch('inc/place_order', {
-    method: 'POST',
-    body: formData
-  })
-    .then(res => {
-      console.log('Response status: 825', res.status);
-      return res.json();
+  setTimeout(() => {
+    const quantityInput = document.getElementById('modal_quantity');
+    const boxInput = document.getElementById('modal_number_of_boxes');
+    const currentQty = parseInt(quantityInput.value) || 1;
+    const currentBoxes = parseInt(boxInput.value) || 1;
+
+    const formData = new FormData(form);
+
+    fetch('inc/place_order', {
+      method: 'POST',
+      body: formData
     })
-    .then(data => {
-      console.log('Response data:', data);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnText;
-      if (data.success) {
-        console.log('Payment redirect URL:', data.payment_redirect);
-        if (data.payment_redirect) {
-          // Redirect to payment gateway
-          Swal.fire({
-            icon: 'info',
-            title: 'Payment Required',
-            text: data.message,
-            confirmButtonText: 'Proceed to Payment',
-            allowOutsideClick: false
-          }).then(() => {
-            console.log('Redirecting to:', data.payment_redirect);
-            window.location.href = data.payment_redirect;
-          });
-        } else {
-          // COD or wallet payment completed
+      .then(res => res.json())
+      .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        window.orderSubmitting = false;
+        if (data.success) {
           Swal.fire({
             icon: 'success',
             title: 'Order Placed!',
-            html: `<p>${data.message}</p><strong>Delivery: Within 2 days</strong>`,
-            confirmButtonText: 'OK',
-            timer: 4000,
-            timerProgressBar: true,
-          }).then(() => {
-            // Redirect to cart
-            window.location.href = 'cart?payment=success&order_code=' + data.order_code + '&amount=' + data.subtotal;
+            html: `<p>Your order has been placed successfully!</p><strong>Order Code: ${data.order_code || ''}</strong><br>Delivery: Within 2 days`,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true
           });
+          setTimeout(() => {
+            form.style.display = 'none';
+            window.location.href = 'index';
+          }, 1800);
+          return;
         }
-      }
-    })
-    .catch(err => {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnText;
-      Swal.fire({
-        icon: 'error',
-        title: 'Request Failed',
-        text: err.message || 'Something went wrong.',
+      })
+      .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        window.orderSubmitting = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Request Failed',
+          text: err.message || 'Something went wrong.',
+        });
       });
-    });
+  }, 1000);
 });
 
 
@@ -1838,74 +1708,19 @@ if (typeof window.testBuyNowClick !== 'function') {
       if (currentTotal < minAmount) {
         // Show quantity adjustment popup
         Swal.fire({
-          icon: 'warning',
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
           title: 'Minimum Order Amount Required',
-          html: `
-            <div style="margin-bottom:10px;">
-              Your order total is ₹<span id='swalTotal'>${currentTotal.toFixed(2)}</span>.<br>
-              Minimum order amount is ₹${minAmount.toFixed(2)}.
-            </div>
-            <p>Please increase quantity to meet the minimum order amount.</p>
-            <div class="d-flex justify-content-center align-items-center mb-3">
-              <button type="button" id="decQtyBtn" class="btn btn-outline-secondary px-3 me-2">−</button>
-              <input type="number" id="newQtyInput" class="form-control text-center" value="${window.buyNowQty}" min="1" style="width: 80px;">
-              <button type="button" id="incQtyBtn" class="btn btn-outline-secondary px-3 ms-2">+</button>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: 'Continue',
-          cancelButtonText: 'Cancel',
-          customClass: {
-            confirmButton: 'btn btn-warning me-3',
-            cancelButton: 'btn btn-secondary'
-          },
-          buttonsStyling: false,
-          didOpen: () => {
-            const input = document.getElementById('newQtyInput');
-            const incBtn = document.getElementById('incQtyBtn');
-            const decBtn = document.getElementById('decQtyBtn');
-            const totalSpan = document.getElementById('swalTotal');
-            
-            incBtn.addEventListener('click', () => {
-              input.value = parseInt(input.value) + 1;
-              totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-            });
-            
-            decBtn.addEventListener('click', () => {
-              if (parseInt(input.value) > 1) {
-                input.value = parseInt(input.value) - 1;
-                totalSpan.textContent = (parseInt(input.value) * productPrice).toFixed(2);
-              }
-            });
-            
-            input.addEventListener('input', () => {
-              let val = parseInt(input.value) || 1;
-              if (val < 1) val = 1;
-              input.value = val;
-              totalSpan.textContent = (val * productPrice).toFixed(2);
-            });
-          },
-          preConfirm: () => {
-            const newQty = parseInt(document.getElementById('newQtyInput').value);
-            if (!newQty || newQty < 1) {
-              Swal.showValidationMessage('Please enter a valid quantity');
-              return false;
-            }
-            if (newQty * productPrice < minAmount) {
-              Swal.showValidationMessage(`Total must be at least ₹${minAmount.toFixed(2)}`);
-              return false;
-            }
-            return newQty;
-          }
-        }).then(result => {
-          if (result.isConfirmed && result.value) {
-            window.buyNowQty = result.value;
-            showBoxPopup(boxes);
-          }
+          html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity बढ़ाएं।`,
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          customClass: { popup: 'sms-toast' }
         });
-      } else {
-        showBoxPopup(boxes);
+        return;
       }
+      showBoxPopup(boxes);
     })
     .catch(error => {
       console.error('Error:', error);
@@ -2053,14 +1868,20 @@ function showBoxPopup(boxes) {
         window.buyNowBoxId = selectedBoxId;
         modal.hide();
         setTimeout(() => {
+          // Always get product quantity from main input or buyNowProductQty
+          let productQty = window.buyNowProductQty || 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
           document.getElementById('modal_product_id').value = window.buyNowProductId;
           document.getElementById('modal_box_id').value = window.buyNowBoxId;
           document.getElementById('modal_box_name').value = window.selectedBoxName;
           document.getElementById('modal_box_price').value = window.selectedBoxPrice;
           document.getElementById('modal_box_image').value = window.selectedBoxImage;
           document.getElementById('modal_custom_box_text').value = window.customBoxText || '';
-          document.getElementById('modal_quantity').value = window.buyNowProductQty || window.buyNowQty;
-          document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Do not use || 1
+          document.getElementById('modal_quantity').value = productQty;
+          document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Only box quantity
           // Always show the checkout modal
           const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
           checkoutModal.show();
@@ -2098,6 +1919,75 @@ setTimeout(() => {
     console.log('Buy Now button not found');
   }
 }, 1000);
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const typeSelect = document.querySelector('.type-select');
+  const qtyInput = document.querySelector('.qty-val');
+  const minusBtn = document.querySelector('.minus-btn');
+  const plusBtn = document.querySelector('.plus-btn');
+  const dynamicPriceEl = document.querySelector('.dynamic-price');
+  const addToCartBtn = document.querySelector('.add-to-cart-btn');
+  const buyNowBtn = document.querySelector('.buy-now-btn');
+  const discountPrice = parseFloat(addToCartBtn.dataset.productDiscountPrice);
+  const baseWeight = 1000; // 1kg
+  let minAmount = 1500; // Default, will fetch from backend
+
+  // Fetch minimum order amount from backend
+  fetch('inc/fetch_settings.php?type=min_order')
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.min_order_amount) {
+        minAmount = parseFloat(data.min_order_amount);
+      }
+    });
+
+  function getTotalPrice() {
+    let selectedType = typeSelect ? parseInt(typeSelect.value, 10) : baseWeight;
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    let totalGrams = selectedType * qty;
+    let totalPrice = (totalGrams / 1000) * discountPrice;
+    return totalPrice;
+  }
+
+  function updatePrice() {
+    dynamicPriceEl.innerText = getTotalPrice().toFixed(2);
+  }
+
+  if (typeSelect) {
+    typeSelect.addEventListener('change', updatePrice);
+  }
+  qtyInput.addEventListener('input', updatePrice);
+  minusBtn.addEventListener('click', () => {
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    qtyInput.value = Math.max(1, qty - 1);
+    updatePrice();
+  });
+  plusBtn.addEventListener('click', () => {
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    qtyInput.value = Math.min(99, qty + 1);
+    updatePrice();
+  });
+  updatePrice();
+
+  // Remove SweetAlert2 popup on quantity/type change (handled above)
+
+  // Buy Now button logic
+  if (buyNowBtn) {
+    buyNowBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const total = getTotalPrice();
+      if (total < minAmount) {
+        showError('Minimum order amount', 'Please enter minimum order amount: ₹' + minAmount);
+        return;
+      }
+      if (typeof testBuyNowClick === 'function') {
+        testBuyNowClick(this);
+      }
+    });
+  }
+});
 </script>
 
 </body>

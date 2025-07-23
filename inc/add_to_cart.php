@@ -8,6 +8,7 @@ $boxId       = $_POST['box_id'] ?? 'none';
 $customText  = trim($_POST['custom_text'] ?? '');
 $boxQty      = isset($_POST['box_qty']) ? (int)$_POST['box_qty'] : 1;
 $isGuest     = isset($_POST['as_guest']) && $_POST['as_guest'] == 1;
+$selectedType = isset($_POST['selected_type']) ? (int)$_POST['selected_type'] : 1000;
 
 // Not logged in check
 if (!isset($_SESSION['user_id']) && !$isGuest) {
@@ -21,13 +22,22 @@ if (!isset($_SESSION['user_id']) && $isGuest) {
 
 if ($productId > 0 && $quantity > 0) {
 
-    $stmt = $conn->prepare("SELECT id, name, discount_price, product_image, weight FROM products WHERE id = ?");
+    $stmt = $conn->prepare("SELECT id, name, discount_price, product_image, weight, weight_type FROM products WHERE id = ?");
     $stmt->execute([$productId]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$product) {
         echo "Product not found.";
         exit;
+    }
+
+    // Force correct values for unit products
+    $weightType = isset($product['weight_type']) ? strtolower($product['weight_type']) : 'g';
+    if ($weightType === 'unit') {
+        $selectedType = 1;
+        $productWeight = '1unit';
+    } else {
+        $productWeight = $selectedType . $weightType;
     }
 
     if (!isset($_SESSION['cart'])) {
@@ -46,7 +56,8 @@ if ($productId > 0 && $quantity > 0) {
                 'product_name'   => $product['name'],
                 'product_price'  => $product['discount_price'],
                 'product_image'  => $product['product_image'],
-                'product_weight' => $product['weight'],
+                'product_weight' => $productWeight,
+                'selected_type'  => $selectedType,
                 'quantity'       => $quantity,
                 'box_id'         => 'custom',
                 'box_name'       => 'Custom Box',
@@ -79,7 +90,8 @@ if ($productId > 0 && $quantity > 0) {
                 'product_name'   => $product['name'],
                 'product_price'  => $product['discount_price'],
                 'product_image'  => $product['product_image'],
-                'product_weight' => $product['weight'],
+                'product_weight' => $productWeight,
+                'selected_type'  => $selectedType,
                 'quantity'       => $quantity,
                 'box_id'         => $box['id'],
                 'box_name'       => $box['box_name'],
@@ -102,7 +114,8 @@ if ($productId > 0 && $quantity > 0) {
                 'product_name'   => $product['name'],
                 'product_price'  => $product['discount_price'],
                 'product_image'  => $product['product_image'],
-                'product_weight' => $product['weight'],
+                'product_weight' => $productWeight,
+                'selected_type'  => $selectedType,
                 'quantity'       => $quantity,
                 'box_id'         => null,
                 'box_name'       => null,

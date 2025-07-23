@@ -117,6 +117,8 @@ try {
         $product_id = (int)$_POST['product_id'];
         $quantity   = (int)($_POST['quantity'] ?? 1);
         $box_qty    = isset($_POST['box_qty']) ? (int)$_POST['box_qty'] : 1;
+        if ($quantity < 1) $quantity = 1;
+        if ($box_qty < 0) $box_qty = 0;
         $custom_box_text = trim($_POST['custom_box_text'] ?? '');
         $box_id = isset($_POST['box_id']) ? $_POST['box_id'] : null;
 

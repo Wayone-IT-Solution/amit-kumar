@@ -118,7 +118,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $min_order      = (int)$_POST['min_order'];
         $max_order      = (int)$_POST['max_order'];
         $tags           = trim($_POST['tags']);
-        $types          = isset($_POST['type']) ? implode(',', $_POST['type']) : ''; // Get types from POST
+        // Fix for implode error: handle both array and string for 'type'
+        if (isset($_POST['type'])) {
+            if (is_array($_POST['type'])) {
+                $types = implode(',', $_POST['type']);
+            } else {
+                $types = $_POST['type'];
+            }
+        } else {
+            $types = '';
+        }
 
         if ($category_id <= 0 || $subcategory_id <= 0 || empty($name) || empty($price)) {
             throw new RuntimeException('Please fill all required fields.');
@@ -231,9 +240,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Select Types
                         </button>
                         <ul class="dropdown-menu w-100 p-2" aria-labelledby="typeDropdownBtn" id="typeDropdownMenu">
-                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="250"> 250</label></li>
-                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="500"> 500</label></li>
-                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="750"> 750</label></li>
+                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="250"> 250 gram</label></li>
+                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="500"> 500 gram</label></li>
+                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="750"> 750 gram</label></li>
+                        <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="1"> 1000 gram</label></li>
+
                         </ul>
                         <input type="hidden" name="type" id="typeHiddenInput">
                     </div>

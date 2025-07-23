@@ -72,7 +72,7 @@ try {
       <!-- Content Column -->
       <div class="col-lg-5 text-center text-lg-start">
         <h2 class="fw-bold mb-3">Preserving Sweet Traditions: The Story of Amit & Dairy Sweets</h2>
-        <p class="mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class="mb-4">Amit Dairy & Sweets has been a cherished name in the community, offering a delightful range of traditional sweets, fresh dairy products, and savory snacks. Our journey is rooted in a passion for quality, authenticity, and customer satisfaction.</p>
         <!-- <a href="#" class="bread-button mt-5">Shop Now</a> -->
       </div>
     </div>
@@ -83,7 +83,7 @@ try {
     <div class="container text-center">
         <h3 class="sub-heading">About Amit Dairy & Sweets</h3>
         <h1>Welcome to Amit  Dairy & Sweets</h1>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        <p>At Amit Dairy & Sweets, we blend time-honored recipes with the finest ingredients to bring you an unforgettable taste experience. From classic mithai to innovative dairy treats, our commitment is to deliver freshness and flavor in every bite. We take pride in serving our customers with warmth and integrity, making every celebration sweeter and every day more delicious.</p>
         <div class="container d-flex justify-content-center align-items-center">
         <img src="assets/img/about/about1.png" alt="CTA Banner" class="img-fluid">
       </div>
@@ -97,7 +97,7 @@ try {
             <div class="heritage-content">
             <h3 class="sub-heading">Our Heritage & Values</h3>
             <h1>Rooted in Tradition, Guided by Values</h1>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </p>
+            <p>Our legacy is built on trust, tradition, and a love for authentic flavors. Guided by strong values, we ensure that every product reflects our dedication to quality and our respect for cultural heritage. Whether it's a festive occasion or a simple craving, Amit Dairy & Sweets is your destination for pure, delicious moments.</p>
 
            
           </div>
@@ -138,7 +138,7 @@ $categories = $stmt->fetchAll();
     <div class="section-title-3 text-center">
   <h3>Our Products</h3>
   <h1>What We Offers</h1>
-  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea </p>
+  <p>Discover a wide variety of sweets, dairy products, and snacks crafted with care and expertise. Our menu features something for everyone—whether you’re looking for classic favorites or new delights, Amit Dairy & Sweets promises quality and taste in every product we offer.</p>
 
 </div>
       <div class="container mt-5">
@@ -261,7 +261,7 @@ $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="row">
                 <div class="col-lg-6">
                     <h2>Get in Touch with Amit Dairy & Sweets</h2>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </p>
+                    <p>We love hearing from our customers! For orders, feedback, or inquiries, please reach out to us. Our team at Amit Dairy & Sweets is always ready to assist you and ensure you have a wonderful experience with us.</p>
 
                     <ul>
                        <li> <i class="bi bi-house"></i> Shop Address : <?= htmlspecialchars($contact['address']) ?> </li>

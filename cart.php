@@ -12,22 +12,15 @@ if (isset($_GET['payment']) && $_GET['payment'] === 'success') {
         document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 icon: 'success',
-                title: 'Payment Successful!',
-                html: `
-                    <p>Your payment of ₹" . number_format($amount, 2) . " has been processed successfully.</p>
-                    <p><strong>Order Code:</strong> " . htmlspecialchars($order_code) . "</p>
-                    <p>Your order will be delivered within 2 days.</p>
-                `,
-                confirmButtonText: 'Continue Shopping',
-                allowOutsideClick: false
-            }).then(() => {
-                // Clear cart after successful payment
-                fetch('inc/clear_cart', {
-                    method: 'POST'
-                }).then(() => {
-                    window.location.href = 'index';
-                });
+                title: 'Order Placed!',
+                html: `<p>Your order has been placed successfully!</p><strong>Order Code: $order_code</strong><br>Delivery: Within 2 days`,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true
             });
+            setTimeout(() => { window.location.href = 'index'; }, 1800);
         });
     </script>";
 }
@@ -567,11 +560,27 @@ $subtotal = 0;
     $totalItems = 0;
 
     // Calculate totals
-    foreach ($cartItems as $key => $item) {
+    foreach ($cartItems as $cartKey => $item) {
         $qty = (int)($item['quantity'] ?? 1);
-        $productPrice = floatval($item['product_price'] ?? 0);
         $boxPrice = floatval($item['box_price'] ?? 0);
-        $productTotal = $productPrice * $qty;
+        $discountPrice = floatval($item['product_price'] ?? 0);
+        $stmt = $conn->prepare("SELECT min_order, max_order, weight_type FROM products WHERE id = ?");
+        $stmt->execute([$item['product_id']]);
+        $productLimits = $stmt->fetch(PDO::FETCH_ASSOC);
+        $minOrder = (int)($productLimits['min_order'] ?? 1);
+        $maxOrder = (int)($productLimits['max_order'] ?? 999);
+        $weightType = strtolower($productLimits['weight_type'] ?? 'g');
+        $weightValue = isset($item['selected_type']) ? (float)$item['selected_type'] : 1000;
+        if ($weightType === 'unit') {
+            $weightValue = 1;
+            $weightUnit = 'unit';
+            $totalWeight = $qty;
+            $productTotal = $qty * $discountPrice;
+        } else {
+            $weightUnit = $weightType;
+            $totalWeight = $weightValue * $qty;
+            $productTotal = ($weightValue * $qty / 1000) * $discountPrice;
+        }
         $boxTotal = $boxPrice * (int)($item['box_qty'] ?? 1);
         $itemTotal = $productTotal + $boxTotal;
         $subtotal += $itemTotal;
@@ -611,16 +620,33 @@ $blockedDates = json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
     <div>Box</div>
     <div>Custom Text</div>
     <div>Quantity</div>
-          <div>Subtotal</div>
+    <div>Subtotal</div>
   </div>
 
         <?php foreach ($cartItems as $cartKey => $item): 
-      $qty = (int)($item['quantity'] ?? 1);
-      $productPrice = floatval($item['product_price'] ?? 0);
-      $boxPrice = floatval($item['box_price'] ?? 0);
-      $productTotal = $productPrice * $qty;
-            $boxTotal = $boxPrice * (int)($item['box_qty'] ?? 1);
-      $itemTotal = $productTotal + $boxTotal;
+  $qty = (int)($item['quantity'] ?? 1);
+  $boxPrice = floatval($item['box_price'] ?? 0);
+  $discountPrice = floatval($item['product_price'] ?? 0);
+  $stmt = $conn->prepare("SELECT min_order, max_order, weight_type FROM products WHERE id = ?");
+  $stmt->execute([$item['product_id']]);
+  $productLimits = $stmt->fetch(PDO::FETCH_ASSOC);
+  $minOrder = (int)($productLimits['min_order'] ?? 1);
+  $maxOrder = (int)($productLimits['max_order'] ?? 999);
+  $weightType = strtolower($productLimits['weight_type'] ?? 'g');
+  $productWeight = $item['product_weight'] ?? '1g';
+  preg_match('/^([\d.]+)\s*([a-zA-Z]+)$/', $productWeight, $matches);
+  $weightValue = isset($matches[1]) ? (float)$matches[1] : 1;
+  $weightUnit = isset($matches[2]) ? $matches[2] : $weightType;
+  $totalWeight = $weightValue * $qty;
+  if ($weightType === 'unit') {
+    $productTotal = $qty * $discountPrice;
+  } else {
+    $productTotal = ($weightValue * $qty / 1000) * $discountPrice;
+  }
+  $boxTotal = $boxPrice * (int)($item['box_qty'] ?? 1);
+  $itemTotal = $productTotal + $boxTotal;
+  $subtotal += $itemTotal;
+  $totalItems += $qty;
 
             // Get product limits
       $stmt = $conn->prepare("SELECT min_order, max_order, weight_type FROM products WHERE id = ?");
@@ -643,8 +669,27 @@ $blockedDates = json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
             <img src="admin/<?= htmlspecialchars($item['product_image']) ?>" alt="<?= htmlspecialchars($item['product_name']) ?>">
             <div class="product-details">
               <h6><?= htmlspecialchars($item['product_name']) ?></h6>
+              <?php
+                // Use session cart's product_weight/type for display
+                $isUnit = false;
+                if (
+                    (isset($item['selected_type']) && $item['selected_type'] == 1 && isset($productLimits['weight_type']) && strtolower($productLimits['weight_type']) === 'unit') ||
+                    (isset($item['product_weight']) && (stripos($item['product_weight'], 'unit') !== false || $item['product_weight'] == '1unit'))
+                ) {
+                    $isUnit = true;
+                }
+                if ($isUnit) {
+                    $weightValue = 1;
+                    $weightUnit = 'unit';
+                    $totalWeight = $qty;
+                } else {
+                    $weightValue = isset($item['selected_type']) ? (float)$item['selected_type'] : 1000;
+                    $weightUnit = $weightType;
+                    $totalWeight = $weightValue * $qty;
+                }
+              ?>
               <div class="weight"><?= $weightValue ?> <?= $weightUnit ?> × <?= $qty ?> = <?= $totalWeight ?> <?= $weightUnit ?></div>
-              <div class="price">₹<?= number_format($productPrice, 2) ?></div>
+              <div class="price"> </div>
               <a href="inc/remove_from_cart?key=<?= urlencode($cartKey) ?>" class="remove-link" onclick="return false;" data-cart-key="<?= htmlspecialchars($cartKey) ?>">Remove</a>
             </div>
       </div>
@@ -683,7 +728,11 @@ $blockedDates = json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
           <div class="item-subtotal">
             <div class="total-price">₹<?= number_format($itemTotal, 2) ?></div>
             <div class="breakdown">
-              <div class="product-line">Product: ₹<?= number_format($productPrice, 2) ?> × <?= $qty ?> = ₹<?= number_format($productTotal, 2) ?></div>
+              <?php if ($isUnit): ?>
+                <div class="product-line">Product: ₹<?= number_format($discountPrice, 2) ?> × <?= $qty ?> unit<?= $qty > 1 ? 's' : '' ?> = ₹<?= number_format($productTotal, 2) ?></div>
+              <?php else: ?>
+                <div class="product-line">Product: <?= $weightValue ?> <?= $weightUnit ?> × <?= $qty ?> = <?= $totalWeight ?> <?= $weightUnit ?>, ₹<?= number_format($discountPrice, 2) ?> per kg = ₹<?= number_format($productTotal, 2) ?></div>
+              <?php endif; ?>
               <?php if ($boxTotal > 0): ?>
                 <div class="box-line">Box: ₹<?= number_format($boxPrice, 2) ?> × <?= (int)($item['box_qty'] ?? 1) ?> = ₹<?= number_format($boxTotal, 2) ?></div>
               <?php endif; ?>
@@ -1125,14 +1174,15 @@ document.addEventListener('DOMContentLoaded', function () {
             
             if (subtotal < minimum) {
                 Swal.fire({
-                    icon: 'warning',
-                    title: 'Minimum Order Required',
-                    html: `
-                        <p>Your total: ₹${subtotal.toFixed(2)}</p>
-                        <p>Minimum required: ₹${minimum.toFixed(2)}</p>
-                        <p>Please add more items to your cart.</p>
-                    `,
-                    confirmButtonText: 'Continue Shopping'
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'info',
+                    title: 'Minimum Order Amount Required',
+                    html: `<p>Your total: ₹${subtotal.toFixed(2)}</p><p>Minimum required: ₹${minimum.toFixed(2)}</p><p>Please add more items to your cart.</p>`,
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    customClass: { popup: 'sms-toast' }
                 });
                 return;
             }

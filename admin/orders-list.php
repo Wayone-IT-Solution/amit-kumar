@@ -166,6 +166,7 @@
                                                                $productName  = $item['product_name'] ?? $item['name'] ?? '-';
                                                                $productPrice = $item['product_price'] ?? '0';
                                                                $quantity     = $item['quantity'] ?? '-';
+                                                               $boxQty       = $item['box_qty'] ?? '-';
                                                                $weight       = $item['product_weight'] ?? '-';
                                                                $boxName      = $item['box_name'] ?? '-';
                                                                $boxPrice     = $item['box_price'] ?? '0';
@@ -183,6 +184,7 @@
                                                                        ' . $imageTag . '<br>
                                                                        <strong>Product:</strong> ' . htmlspecialchars($productName) . ' (₹' . htmlspecialchars($productPrice) . ')<br>
                                                                        <strong>Quantity:</strong> ' . htmlspecialchars($quantity) . '<br>
+                                                                       <strong>Box Quantity:</strong> ' . htmlspecialchars($boxQty) . '<br>
                                                                        <strong>Weight:</strong> ' . htmlspecialchars($weight) . '<br>
                                                                        <strong>Box:</strong> ' . htmlspecialchars($boxName) . ' (₹' . htmlspecialchars($boxPrice) . ')<br>';
                                                    
@@ -205,20 +207,7 @@
                                                    <td class="items"><?= $cartSummary; ?></td>
                                                    <td class="total">₹<?= number_format($order['subtotal'], 2); ?></td>
                                                    <td class="total">
-                                                      <?php
-                                                         $boxImages = [];
-                                                         if (is_array($cartItems)) {
-                                                             foreach ($cartItems as $item) {
-                                                                 if (is_string($item)) {
-                                                                     $item = json_decode($item, true);
-                                                                 }
-                                                                 if (!is_array($item)) continue;
-                                                                 if (!empty($item['box_image'])) {
-                                                                     $boxImages[] = $item['box_image'];
-                                                                 }
-                                                             }
-                                                         }
-                                                         ?>
+                                                   
                                                       <?php
                                                          $boxNames = [];
                                                          if (is_array($cartItems)) {

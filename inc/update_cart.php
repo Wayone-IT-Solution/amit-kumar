@@ -51,11 +51,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Calculate prices
     $productPrice = floatval($item['product_price'] ?? 0);
-        $boxPrice = floatval($item['box_price'] ?? 0);
-        $boxQty = (int)($item['box_qty'] ?? 1);
-
-        $productTotal = $productPrice * $productQty;
-        $boxTotal = $boxPrice * $boxQty;
+    $boxPrice = floatval($item['box_price'] ?? 0);
+    $boxQty = (int)($item['box_qty'] ?? 1);
+    $weightType = $productWeightType;
+    $weightValue = isset($item['selected_type']) ? (float)$item['selected_type'] : 1000;
+    if ($weightType === 'unit') {
+        $weightValue = 1;
+        $productTotal = $productQty * $productPrice;
+    } else {
+        $productTotal = ($weightValue * $productQty / 1000) * $productPrice;
+    }
+    $boxTotal = $boxPrice * $boxQty;
     $itemTotal = $productTotal + $boxTotal;
 
         // Calculate cart subtotal
@@ -69,11 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
         // Calculate weight
-        $productWeight = $item['product_weight'] ?? '1g';
-        preg_match('/^([\d.]+)\s*([a-zA-Z]+)?$/', $productWeight, $matches);
-    $weightPerUnit = isset($matches[1]) ? (float)$matches[1] : 1;
-    $weightUnit = isset($matches[2]) ? $matches[2] : $productWeightType;
-        $totalWeight = $weightPerUnit * $productQty;
+    $weightPerUnit = $weightValue;
+    $weightUnit = $weightType;
+    $totalWeight = $weightPerUnit * $productQty;
+    if ($weightType === 'unit') {
+        $weightUnit = 'unit';
+    }
 
         $response = [
         'success' => true,

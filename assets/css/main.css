@@ -2064,3 +2064,26 @@ Newsletter
 .wishlist-btn .bi-heart-fill {
   color: #dc3545 !important;
 }
+
+/* Custom SMS Toast Styles for SweetAlert2 */
+.sms-toast.swal2-popup.swal2-toast.swal2-info,
+.sms-toast.swal2-popup.swal2-toast.swal2-warning {
+  background: #fffbe6 !important;
+  color: #b8860b !important;
+  border: 1.5px solid #ffe066 !important;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.15);
+}
+
+.sms-toast.swal2-popup.swal2-toast.swal2-error {
+  background: #ff4d4f !important;
+  color: #fff !important;
+  border: 1.5px solid #d90429 !important;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
+}
+
+.sms-toast-success.swal2-popup.swal2-toast.swal2-success {
+  background: #4BB543 !important;
+  color: #fff !important;
+  border: 1.5px solid #2e7d32 !important;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+}

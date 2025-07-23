@@ -387,13 +387,31 @@ try {
                  
                 
                   <div class="price-tag">
-                    <del>₹ <?= htmlspecialchars($product['price']) ?></del>
-                    <span class="fw-normal">/</span> ₹ <?= htmlspecialchars($product['discount_price']) ?>
+                    <del>₹ <span class="base-price"><?= htmlspecialchars($product['price']) ?></span></del>
+                    <span class="fw-normal">/</span> ₹ <span class="dynamic-price"><?= htmlspecialchars($product['discount_price']) ?></span>
                   </div>
                   
                 </div>
               
               </div>
+
+              <!-- Type Dropdown -->
+        <?php $isUnit = (isset($product['weight_type']) && strtolower($product['weight_type']) === 'unit'); ?>
+<div class="mb-2">
+  <select class="form-select form-select-sm type-select"
+          style="max-width: 120px; display: inline-block; margin-top:30px; background-color: #fffbea; border-color: #f7d200; color: #000;">
+    <?php if ($isUnit): ?>
+      <option value="1">1 unit</option>
+    <?php else: ?>
+      <?php $typesArr = array_filter(array_map('trim', explode(',', $product['types']))); ?>
+      <?php foreach ($typesArr as $type): ?>
+        <option value="<?= (int)$type ?>"><?= (int)$type ?> gram<?= ((int)$type == 1000) ? ' (1kg)' : '' ?></option>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </select>
+</div>
+
+
 
               <div class="mt-auto">
                  
@@ -409,7 +427,7 @@ try {
                       data-min="<?= $product['min_order'] ?>"
                       data-max="<?= $product['max_order'] ?>"
                     >
-                    <?= $product['weight_type'] ?>
+                    
                     <button class="btn btn-sm p-0 border-0 plus-btn">+</button>
                   </div>
 
@@ -419,8 +437,10 @@ try {
                     data-category-id="<?= $product['category_id']; ?>"
                     data-product-name="<?= htmlspecialchars($product['name']) ?>"
                     data-product-price="<?= htmlspecialchars($product['price']) ?>"
+                    data-product-discount-price="<?= htmlspecialchars($product['discount_price']) ?>"
                     data-product-image="<?= htmlspecialchars($product['product_image']) ?>"
                     data-product-weight="<?= htmlspecialchars($product['weight']) ?>"
+                    data-product-weight-type="<?= htmlspecialchars($product['weight_type']) ?>"
                   >
                     Add to Cart
                   </button>
@@ -485,6 +505,12 @@ document.querySelectorAll('.product-card').forEach(function(card) {
   const addToCartBtn = card.querySelector('.add-to-cart-btn');
   const minOrder = parseInt(qtyInput.dataset.min) || 1;
   const maxOrder = parseInt(qtyInput.dataset.max) || 999;
+  const typeSelect = card.querySelector('.type-select');
+  const basePrice = parseFloat(addToCartBtn.dataset.productPrice);
+  const baseWeight = parseInt(addToCartBtn.dataset.productWeight) || 1000; // default 1000g if not set
+  const dynamicPriceEl = card.querySelector('.dynamic-price');
+  const discountPrice = parseFloat(addToCartBtn.dataset.productDiscountPrice);
+  const isUnit = (addToCartBtn.dataset.productWeightType && addToCartBtn.dataset.productWeightType.toLowerCase() === 'unit');
 
   function updateButtonState() {
     let qty = parseInt(qtyInput.value) || minOrder;
@@ -492,27 +518,43 @@ document.querySelectorAll('.product-card').forEach(function(card) {
     minusBtn.disabled = qty <= minOrder;
     plusBtn.disabled = qty >= maxOrder;
     addToCartBtn.disabled = qty < minOrder || qty > maxOrder;
+    updatePrice();
   }
 
+  function updatePrice() {
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    let totalPrice = 0;
+    if (isUnit) {
+      totalPrice = qty * discountPrice;
+    } else {
+      let selectedType = typeSelect ? parseInt(typeSelect.value, 10) : 1000;
+      let totalGrams = selectedType * qty;
+      totalPrice = (totalGrams / 1000) * discountPrice;
+    }
+    dynamicPriceEl.innerText = totalPrice.toFixed(2);
+  }
+
+  if (typeSelect) {
+    typeSelect.addEventListener('change', updatePrice);
+  }
+  qtyInput.addEventListener('input', updateButtonState);
   minusBtn.addEventListener('click', () => {
     let qty = parseInt(qtyInput.value) || minOrder;
     qtyInput.value = Math.max(minOrder, qty - 1);
     updateButtonState();
   });
-
   plusBtn.addEventListener('click', () => {
     let qty = parseInt(qtyInput.value) || minOrder;
     qtyInput.value = Math.min(maxOrder, qty + 1);
     updateButtonState();
   });
-
-  qtyInput.addEventListener('input', updateButtonState);
   updateButtonState();
 
   addToCartBtn.addEventListener('click', () => {
     const qty = parseInt(qtyInput.value) || 1;
     const productId = addToCartBtn.dataset.productId;
     const categoryId = <?= json_encode($categoryId) ?>;
+    const selectedType = typeSelect ? parseInt(typeSelect.value, 10) : 1000;
 
     fetch('inc/fetch_boxes', {
       method: 'POST',
@@ -640,19 +682,19 @@ document.querySelectorAll('.product-card').forEach(function(card) {
         });
 
         document.getElementById('confirmBoxBtn').onclick = () => {
-          submitToCart(productId, qty, selectedBoxId, modal, customBoxText, selectedBoxQty, selectedBoxName, selectedBoxPrice);
+          submitToCart(productId, qty, selectedBoxId, modal, customBoxText, selectedBoxQty, selectedBoxName, selectedBoxPrice, selectedType);
         };
 
         document.getElementById('skipBoxBtn').onclick = () => {
-          submitToCart(productId, qty, 'none', modal, '', 0, '', 0);
+          submitToCart(productId, qty, 'none', modal, '', 0, '', 0, selectedType);
         };
       }, 100);
     });
   });
 });
 
-function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0) {
-  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}`;
+function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0, selectedType = 1000) {
+  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}&selected_type=${selectedType}`;
 
   fetch('inc/add_to_cart', {
     method: 'POST',
