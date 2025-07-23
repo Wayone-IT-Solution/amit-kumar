@@ -388,36 +388,44 @@ try {
         }
         $shipping_address = $address_details . ', ' . $house_block . ', ' . $area_road;
         $payment_method = 'Cash on Delivery'; // Change if needed
-        // Use production image URL for AWS server
-        $image_url = 'https://amitdairyandsweets.com/amit-kumar/assets/img/clients/order.jpg';
+        // Use project logo and modern template for email
+        $logo_url = 'https://amitdairyandsweets.com/amit-kumar/assets/img/logo.webp';
         $userMsg_en = '
-<div style="background:#f4f8fb;padding:0;margin:0;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - Amit Dairy & Sweets</title>
+</head>
+<body style="background:#f4f8fb;margin:0;padding:0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
     <div style="padding:32px 24px 0 24px;text-align:center;">
-      <h1 style="font-size:2.2rem;margin:0 0 8px 0;">Thank you for your order!</h1>
-      <img src="'.$image_url.'" alt="Shopping" style="width:100%;max-width:320px;border-radius:12px;margin:16px 0;">
-      <p style="font-size:1.1rem;">Dear <b>'.htmlspecialchars($receiver_name).'</b>,<br>
-      Your order has been placed successfully!<br>
-      <b>Delivery Date:</b> '.htmlspecialchars($delivery_date).'<br>
-      <b>Order ID:</b> '.htmlspecialchars($order_code).'
-      </p>
+      <img src="'.$logo_url.'" alt="Amit Dairy & Sweets" style="width:90px;margin-bottom:18px;">
+      <h1 style="font-size:2.2rem;margin:0 0 8px 0;color:#333;">Order Placed Successfully!</h1>
+      <p style="font-size:1.1rem;color:#444;">Dear <b>'.htmlspecialchars($receiver_name).'</b>,<br>Your order has been placed successfully.</p>
+      <div style="margin:18px 0 0 0;font-size:1.1rem;">
+        <b>Order ID:</b> <span style="color:#6c63ff;">'.htmlspecialchars($order_code).'</span><br>
+        <b>Delivery Date:</b> '.htmlspecialchars($delivery_date).'
+      </div>
     </div>
     <div style="padding:24px;">
-      <h2 style="font-size:1.2rem;margin-bottom:12px;">Order summary</h2>
+      <h2 style="font-size:1.2rem;margin-bottom:12px;color:#333;">Order Summary</h2>
       <hr style="border:0;border-top:1px solid #eee;margin-bottom:18px;">
       '.$productLines.'
     </div>
     <div style="padding:24px;background:#f7f7f7;">
-      <h3 style="margin:0 0 8px 0;">Customer information</h3>
-      <p style="margin:0 0 4px 0;"><b>Shipping address:</b> '.htmlspecialchars($address_details . ', ' . $house_block . ', ' . $area_road).'</p>
-      <p style="margin:0 0 4px 0;"><b>Payment method:</b> Cash on Delivery</p>
+      <h3 style="margin:0 0 8px 0;color:#333;">Shipping Information</h3>
+      <p style="margin:0 0 4px 0;color:#444;"><b>Address:</b> '.htmlspecialchars($address_details . ', ' . $house_block . ', ' . $area_road).'</p>
+      <p style="margin:0 0 4px 0;color:#444;"><b>Payment method:</b> Cash on Delivery</p>
     </div>
     <div style="padding:24px;text-align:center;">
-      <p style="margin:0 0 8px 0;">Thank you for shopping with us!<br><b>Amit Dairy & Sweets</b></p>
+      <p style="margin:0 0 8px 0;color:#333;">Thank you for shopping with us!<br><b>Amit Dairy & Sweets</b></p>
       <small style="color:#888;">If you have any questions, reply to this email.</small>
     </div>
   </div>
-</div>
+</body>
+</html>
 ';
         send_email($receiver_email, 'Order Placed - Amit Dairy & Sweets', $userMsg_en);
         unset($_SESSION['cart']);

@@ -55,55 +55,66 @@ try {
     window.buyNowProductId = productId;
     window.customBoxText = '';
     window.buyNowQty = selectedQty;
-    Promise.all([
-      fetch('inc/fetch_settings.php?type=min_order').then(res => res.json()).catch(() => ({ min_order_amount: 1500 })),
-      fetch('inc/fetch_boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `category_id=${categoryId}`
-      }).then(res => res.json()).catch(() => [])
-    ])
-    .then(([settings, boxes]) => {
-      const minAmount = parseFloat(settings.min_order_amount || 1500);
-      const productPrice = price;
-      // Always recalculate with latest quantity
-      const currentTotal = productPrice * selectedQty;
-      if (currentTotal < minAmount) {
+    fetch('inc/fetch_settings.php?type=min_order')
+      .then(res => res.json())
+      .then(settings => {
+        const minAmount = parseFloat(settings.min_order_amount || 1500);
+        let currentTotal = price * selectedQty;
+        if (currentTotal < minAmount) {
+          // Calculate the minimum quantity needed
+          let newQty = Math.ceil(minAmount / price);
+          if (qtyInput) {
+            qtyInput.value = newQty;
+          }
+          // Re-read the updated value and update global
+          selectedQty = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
+          window.buyNowQty = selectedQty;
+          currentTotal = price * selectedQty;
+          if (currentTotal < minAmount) {
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'info',
+              title: 'Minimum Order Amount Required',
+              html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}. Quantity Increased!`,
+              showConfirmButton: false,
+              timer: 4000,
+              timerProgressBar: true,
+              customClass: { popup: 'sms-toast' }
+            });
+            return;
+          }
+        } else {
+          window.buyNowQty = selectedQty;
+        }
         Swal.fire({
           toast: true,
           position: 'top-end',
-          icon: 'info',
-          title: 'Minimum Order Amount Required',
-          html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity increased`,
+          icon: 'success',
+          title: 'Congratulations! Minimum order amount met.',
+          html: `Your order total is ₹${currentTotal.toFixed(2)}.`,
           showConfirmButton: false,
-          timer: 4000,
+          timer: 2500,
           timerProgressBar: true,
-          customClass: { popup: 'sms-toast' }
+          customClass: { popup: 'sms-toast-success' }
         });
-        return;
-      }
-      // Show congratulation toast
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: 'Congratulations! Minimum order amount met.',
-        html: `Your order total is ₹${currentTotal.toFixed(2)}.`,
-        showConfirmButton: false,
-        timer: 2500,
-        timerProgressBar: true,
-        customClass: { popup: 'sms-toast-success' }
+        fetch('inc/fetch_boxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `category_id=${categoryId}`
+        })
+        .then(res => res.json())
+        .then(boxes => {
+          setTimeout(() => showBoxPopup(boxes), 1200);
+        });
+      })
+      .catch(error => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Something went wrong. Please try again.'
+        });
       });
-      setTimeout(() => showBoxPopup(boxes), 1200);
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Something went wrong. Please try again.'
-      });
-    });
   }
 
   // Also attach to window object

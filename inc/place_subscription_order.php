@@ -140,11 +140,66 @@ try {
     $logStmt->execute([$orderId, $userId, "Subscription order #$orderId created successfully"]);
 
     // Send SMS to admin
-    $adminPhone = '9889090837';
-    $adminMsg_en = "New subscription order placed: $order_code by user ID $userId. Delivery Date: $delivery_date.";
-    $adminMsg_hi = "नई सब्सक्रिप्शन ऑर्डर: $order_code, उपयोगकर्ता आईडी $userId द्वारा। डिलीवरी तिथि: $delivery_date.";
-    $adminMsg_bi_sms = $adminMsg_en . "\n\n" . $adminMsg_hi;
-    send_sms($adminPhone, $adminMsg_bi_sms);
+    // $adminPhone = '9889090837';
+    // $adminMsg_en = "New subscription order placed: $order_code by user ID $userId. Delivery Date: $delivery_date.";
+    // $adminMsg_hi = "नई सब्सक्रिप्शन ऑर्डर: $order_code, उपयोगकर्ता आईडी $userId द्वारा। डिलीवरी तिथि: $delivery_date.";
+    // $adminMsg_bi_sms = $adminMsg_en . "\n\n" . $adminMsg_hi;
+    // send_sms($adminPhone, $adminMsg_bi_sms);
+
+    // Send email to user
+    $user_email = '';
+    $stmt = $conn->prepare('SELECT email FROM users WHERE id = ?');
+    $stmt->execute([$userId]);
+    $user_email = $stmt->fetchColumn();
+    error_log('Trying to send mail to user: ' . $user_email . ' from sender: j83367806@gmail.com');
+    if ($user_email) {
+        $logo_url = 'https://amitdairyandsweets.com/amit-kumar/assets/img/logo.webp';
+        $subject = "Subscription Order Placed - Amit Dairy & Sweets";
+        $body = '
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Confirmation - Amit Dairy & Sweets</title>
+</head>
+<body style="background:#f4f8fb;margin:0;padding:0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+    <div style="padding:32px 24px 0 24px;text-align:center;">
+      <img src="'.$logo_url.'" alt="Amit Dairy & Sweets" style="width:90px;margin-bottom:18px;">
+      <h1 style="font-size:2.2rem;margin:0 0 8px 0;color:#333;">Subscription Activated!</h1>
+      <p style="font-size:1.1rem;color:#444;">Dear <b>'.htmlspecialchars($receiver_name).'</b>,<br>Your subscription order has been placed successfully.</p>
+      <div style="margin:18px 0 0 0;font-size:1.1rem;">
+        <b>Order ID:</b> <span style="color:#6c63ff;">'.htmlspecialchars($order_code).'</span><br>
+        <b>Plan:</b> '.htmlspecialchars($subscription['title']).'<br>
+        <b>Delivery Date:</b> '.htmlspecialchars($delivery_date).'<br>
+        <b>Expiry Date:</b> '.htmlspecialchars($expiry_date).'
+      </div>
+    </div>
+    <div style="padding:24px;background:#f7f7f7;">
+      <h3 style="margin:0 0 8px 0;color:#333;">Shipping Information</h3>
+      <p style="margin:0 0 4px 0;color:#444;"><b>Address:</b> '.htmlspecialchars($address_details . ', ' . $house_block . ', ' . $area_road).'</p>
+      <p style="margin:0 0 4px 0;color:#444;"><b>Delivery Time:</b> '.htmlspecialchars($delivery_time).'</p>
+    </div>
+    <div style="padding:24px;text-align:center;">
+      <p style="margin:0 0 8px 0;color:#333;">Thank you for subscribing!<br><b>Amit Dairy & Sweets</b></p>
+      <small style="color:#888;">If you have any questions, reply to this email.</small>
+    </div>
+  </div>
+</body>
+</html>
+';
+        $result = send_email($user_email, $subject, $body);
+        error_log('Mail send result: ' . var_export($result, true));
+    } else {
+        error_log('User email is blank or invalid!');
+    }
+
+    // Send email to admin
+    $admin_email = 'admin@amitdairyandsweets.com';
+    $admin_subject = "New Subscription Order: $order_code";
+    $admin_body = "A new subscription order has been placed.<br>Order Code: <b>$order_code</b><br>User: <b>$receiver_name</b> ($user_email)<br>Plan: <b>{$subscription['title']}</b><br>Delivery Date: <b>$delivery_date</b>";
+    send_email($admin_email, $admin_subject, $admin_body);
     
     // Check if this is a 30-day subscription and set up auto-expiration
     if ($subscription['valid_days'] == 30) {
