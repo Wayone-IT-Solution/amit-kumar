@@ -264,14 +264,14 @@ if (!isset($_SESSION['admin_id'])) {
                     
                     // Monthly sales data for chart
 $stmt = $conn->prepare("
-SELECT 
-    DATE_FORMAT(created_at, '%b %Y') AS month, 
-    SUM(subtotal) AS total,
-    MIN(created_at) as sort_date
-FROM orders 
-WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-GROUP BY month
-ORDER BY sort_date;
+    SELECT 
+        DATE_FORMAT(created_at, '%b %Y') AS month,
+        SUM(subtotal) AS total,
+        MIN(created_at) as min_created
+    FROM orders
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%b %Y')
+    ORDER BY min_created;
 ");
 
 $stmt->execute();
@@ -318,18 +318,16 @@ $totals = array_map('floatval', array_column($monthlySales, 'total'));
                     $subscriptionRevenue = $stmt->fetchColumn();
 
                     // Monthly subscription data
-                 $stmt = $conn->query("
-    SELECT 
-        DATE_FORMAT(created_at, '%b %Y') AS month, 
-        COUNT(*) AS count, 
-        SUM(total_amount) AS revenue,
-        MIN(created_at) AS sort_date
-    FROM subscription_orders 
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-    GROUP BY month 
-    ORDER BY sort_date
-");
-
+                    $stmt = $conn->query("
+                        SELECT 
+  DATE_FORMAT(created_at, '%b %Y') AS month,
+  COUNT(*) AS count,
+  SUM(total_amount) AS revenue
+FROM subscription_orders
+WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+GROUP BY DATE_FORMAT(created_at, '%b %Y')
+ORDER BY MIN(created_at);
+                    ");
                     $monthlySubscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     $subscriptionMonths = array_column($monthlySubscriptions, 'month');
@@ -338,11 +336,15 @@ $totals = array_map('floatval', array_column($monthlySales, 'total'));
 
                     // 6-month subscription data
                     $stmt = $conn->query("
-                        SELECT DATE_FORMAT(created_at, '%b %Y') AS month, COUNT(*) AS count, SUM(total_amount) AS revenue
-                        FROM subscription_orders 
-                        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-                        GROUP BY month 
-                        ORDER BY created_at
+                           SELECT 
+        DATE_FORMAT(created_at, '%b %Y') AS month, 
+        COUNT(*) AS count, 
+        SUM(total_amount) AS revenue,
+        MIN(created_at) as sort_date
+    FROM subscription_orders
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+    GROUP BY month
+    ORDER BY sort_date 
                     ");
                     $sixMonthSubscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1157,6 +1159,10 @@ $totals = array_map('floatval', array_column($monthlySales, 'total'));
     });
     </script>
 
+    <!-- Admin Notifications -->
+    <link rel="stylesheet" href="assets/css/admin-notifications.css">
+    <script src="assets/js/admin-notifications.js"></script>
+    
     <!-- Add SweetAlert2 CDN in <head> if not present -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -1223,30 +1229,16 @@ document.addEventListener('DOMContentLoaded', function() {
               selectEl.setAttribute('data-current', newStatus);
               var badgeClass = selectEl.options[selectEl.selectedIndex].getAttribute('data-badge');
               selectEl.className = 'form-select form-select-sm d-inline w-auto status-dropdown ' + badgeClass;
-              Swal.fire({
-                icon: 'success',
-                title: 'Status Updated',
-                text: 'Order status updated successfully!',
-                timer: 1200,
-                showConfirmButton: false
-              });
+              showAdminSuccess('Status Updated', 'Order status updated successfully!');
             } else {
-              Swal.fire({
-                icon: 'error',
-                title: 'Update Failed',
-                text: data.message || 'Could not update status.'
-              });
+              showAdminError('Update Failed', data.message || 'Could not update status.');
               selectEl.value = currentStatus;
               var badgeClass = selectEl.options[selectEl.selectedIndex].getAttribute('data-badge');
               selectEl.className = 'form-select form-select-sm d-inline w-auto status-dropdown ' + badgeClass;
             }
           })
           .catch((err) => {
-            Swal.fire({
-              icon: 'error',
-              title: 'Update Failed',
-              text: 'Could not update status.'
-            });
+            showAdminError('Update Failed', 'Could not update status.');
             selectEl.value = currentStatus;
             var badgeClass = selectEl.options[selectEl.selectedIndex].getAttribute('data-badge');
             selectEl.className = 'form-select form-select-sm d-inline w-auto status-dropdown ' + badgeClass;
