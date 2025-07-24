@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php'; // adjust path if needed
+require_once 'db.php'; // adjust path if needed ok
 require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/Exception.php';
 require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/SMTP.php';
@@ -97,4 +97,4 @@ $message = "
 
 header('Content-Type: application/json');
 echo json_encode($response);
-exit;
+exit; 
