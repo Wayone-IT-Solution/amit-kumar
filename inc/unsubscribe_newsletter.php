@@ -26,7 +26,22 @@ if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
     <div class="card shadow p-4 text-center">
         <h3 class="mb-3">Newsletter Unsubscribe</h3>
         <p><?= htmlspecialchars($message) ?></p>
-        <a href="../index" class="btn btn-primary mt-3">Back to Home</a>
+<a href="../index" class="btn mt-3" style="
+    background-color: #f7d200;
+    color: #000;
+    padding: 10px 24px;
+    font-weight: 600;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    display: inline-block;
+    text-decoration: none;
+    transition: background-color 0.3s ease, transform 0.2s;
+"
+onmouseover="this.style.backgroundColor='#e6c000'; this.style.transform='scale(1.05)'"
+onmouseout="this.style.backgroundColor='#f7d200'; this.style.transform='scale(1)'">
+    ⬅️ Back to Home
+</a>
     </div>
 </body>
 </html> 
