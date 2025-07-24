@@ -318,13 +318,18 @@ $totals = array_map('floatval', array_column($monthlySales, 'total'));
                     $subscriptionRevenue = $stmt->fetchColumn();
 
                     // Monthly subscription data
-                    $stmt = $conn->query("
-                        SELECT DATE_FORMAT(created_at, '%b %Y') AS month, COUNT(*) AS count, SUM(total_amount) AS revenue
-                        FROM subscription_orders 
-                        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                        GROUP BY month 
-                        ORDER BY created_at
-                    ");
+                 $stmt = $conn->query("
+    SELECT 
+        DATE_FORMAT(created_at, '%b %Y') AS month, 
+        COUNT(*) AS count, 
+        SUM(total_amount) AS revenue,
+        MIN(created_at) AS sort_date
+    FROM subscription_orders 
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY month 
+    ORDER BY sort_date
+");
+
                     $monthlySubscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     $subscriptionMonths = array_column($monthlySubscriptions, 'month');
