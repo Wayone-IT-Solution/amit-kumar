@@ -235,10 +235,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                         <div class="col-md-3 mb-3">
                                 <label for="typeDropdownBtn" class="form-label">Type</label>
+                                
                     <div class="dropdown">
+                        
                         <button class="btn btn-light dropdown-toggle w-100" type="button" id="typeDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
                         Select Types
                         </button>
+                  
+
                         <ul class="dropdown-menu w-100 p-2" aria-labelledby="typeDropdownBtn" id="typeDropdownMenu">
                         <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="250"> 250 gram</label></li>
                         <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="500"> 500 gram</label></li>
@@ -246,6 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <li><label class="form-check"><input class="form-check-input type-checkbox" type="checkbox" value="1"> 1000 gram</label></li>
 
                         </ul>
+                                                     <small class="text-muted">Select  All  types.</small>
+
                         <input type="hidden" name="type" id="typeHiddenInput">
                     </div>
                     </div>

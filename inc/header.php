@@ -13,7 +13,7 @@ ob_start();
   }
 
   .header-container {
-    max-width: 1200px;
+    
     margin: 0 auto;
     padding: 0 20px;
   }
@@ -452,7 +452,7 @@ ob_start();
   });
 </script>
 
-  <div class="header-container">
+  <div class="header-container" style="background-color: white; margin-top:-10px;">
     <div class="menu-container">
       <div class="menu-logo">
         <a href="index">

@@ -264,13 +264,16 @@ if (!isset($_SESSION['admin_id'])) {
                     
                     // Monthly sales data for chart
 $stmt = $conn->prepare("
-SELECT DATE_FORMAT(created_at, '%b %Y') AS month,
-       SUM(subtotal) AS total
-FROM orders
-WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-GROUP BY DATE_FORMAT(created_at, '%b %Y')
-ORDER BY MIN(created_at);
+    SELECT 
+        DATE_FORMAT(created_at, '%b %Y') AS month,
+        SUM(subtotal) AS total,
+        MIN(created_at) as min_created
+    FROM orders
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%b %Y')
+    ORDER BY min_created;
 ");
+
 $stmt->execute();
 $monthlySales = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

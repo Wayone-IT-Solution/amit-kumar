@@ -650,7 +650,7 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php
 
 
-$stmt = $conn->query("SELECT DISTINCT blocked_date FROM blocked_slots WHERE blocked_date IS NOT NULL AND blocked_date != ''");
+$stmt = $conn->query("SELECT DISTINCT blocked_date FROM blocked_slots WHERE blocked_date IS NOT NULL");
 $blockedDatesRaw = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 // ✅ Encode for JS

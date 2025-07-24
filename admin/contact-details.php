@@ -207,7 +207,7 @@ try {
             <!-- Twitter -->
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="twitter" class="form-label">Twitter</label>
+                <label for="twitter" class="form-label">X</label>
                 <input type="url" class="form-control" name="twitter" id="twitter" placeholder="https://twitter.com/..." value="<?= htmlspecialchars($contact['twitter'] ?? '') ?>">
               </div>
             </div>
