@@ -1,6 +1,9 @@
 <?php
 session_start();
+error_reporting(0);
+ini_set('display_errors', 0);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -28,12 +31,92 @@ session_start();
   <link href="assets/vendor/aos/aos.css" rel="stylesheet">
   <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Main CSS File -->
-  <link href="assets/css/main.css" rel="stylesheet">
+<!-- Main CSS File -->
+<link href="assets/css/main.css" rel="stylesheet">
+
+<script>
+window.productWeightType = <?= isset($product['weight_type']) ? json_encode(strtolower($product['weight_type'])) : 'null' ?>;
+</script>
+
+<!-- Buy Now Button Logic (Single Source) -->
+<script>
+function testBuyNowClick(button) {
+  const productId = button.dataset.productId;
+  const categoryId = button.dataset.categoryId;
+  const price = parseFloat(button.dataset.productDiscountPrice || button.dataset.price || 0);
+  let qtyInput = document.querySelector('.qty-val');
+  let selectedQty = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
+  window.isBuyNow = true;
+  window.buyNowProductId = productId;
+  window.customBoxText = '';
+  window.buyNowQty = selectedQty;
+
+  fetch('inc/fetch_settings.php?type=min_order')
+    .then(res => res.json())
+    .then(settings => {
+      const minAmount = parseFloat(settings.min_order_amount || 1500);
+      let currentTotal = price * selectedQty;
+      if (currentTotal < minAmount) {
+        let newQty = Math.ceil(minAmount / price);
+        if (qtyInput) {
+          qtyInput.value = newQty;
+        }
+        selectedQty = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
+        window.buyNowQty = selectedQty;
+        currentTotal = price * selectedQty;
+        if (currentTotal < minAmount) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: 'Minimum Order Amount Required',
+            html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}. Quantity Increased!`,
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+            customClass: { popup: 'sms-toast' }
+          });
+          return;
+        }
+      } else {
+        window.buyNowQty = selectedQty;
+      }
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Congratulations! Minimum order amount met.',
+        html: `Your order total is ₹${currentTotal.toFixed(2)}.`,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        customClass: { popup: 'sms-toast-success' }
+      });
+      fetch('inc/fetch_boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `category_id=${categoryId}`
+      })
+      .then(res => res.json())
+      .then(boxes => {
+        setTimeout(() => showBoxPopup(boxes), 1200);
+      });
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Something went wrong. Please try again.'
+      });
+    });
+}
+window.testBuyNowClick = testBuyNowClick;
+</script>
 
 </head>
 
@@ -87,40 +170,84 @@ try {
   <div class="container">
     <div class="row align-items-center">
       <div class="col-lg-6 mb-4 mb-lg-0">
-        <div class="product-image">
-          <img src="admin/<?= htmlspecialchars($product['product_image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>">
-        </div>
+       <div class="product-image position-relative">
+  <!-- Product Image -->
+  <img src="admin/<?= htmlspecialchars($product['product_image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>">
+
+  <!-- Wishlist Button (top-left corner) -->
+  <form method="post" action="inc/add_to_wishlist" class="wishlist-form position-absolute" style="top: 5px; left: 5px; margin: 0;">
+    <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+    <?php $inWishlist = in_array($product['id'], $_SESSION['wishlist'] ?? []); ?>
+    <button type="submit" class="btn p-0 border-0 bg-transparent wishlist-btn" title="Add to Wishlist">
+      <i class="bi <?= $inWishlist ? 'bi-heart-fill' : 'bi-heart' ?> fs-3 text-white"></i>
+    </button>
+  </form>
+</div>
+
       </div>
       <div class="col-lg-6">
         <div class="product-info">
           <h2><?= htmlspecialchars($product['name']) ?></h2>
-
           <div class="product-spec mb-3">
             <h4>Product Code: <?= htmlspecialchars($product['product_code']) ?></h4>
             <h4>Price: <del>₹<?= htmlspecialchars($product['price']) ?></del></h4>
-            <h4>Discounted Price: ₹<?= htmlspecialchars($product['discount_price']) ?></h4>
+            <h4>Discounted Price: ₹<span class="dynamic-price"><?= htmlspecialchars($product['discount_price']) ?></span></h4>
             <h4>
-            Quantity: <?= htmlspecialchars($product['weight']) ?><?= !empty($product['weight_type']) ? ' (' . htmlspecialchars($product['weight_type']) . ')' : '' ?>
-          </h4>
-
+              Quantity: <?= htmlspecialchars($product['weight']) ?><?= !empty($product['weight_type']) ? ' (' . htmlspecialchars($product['weight_type']) . ')' : '' ?>
+            </h4>
             <h4>Category: <?= htmlspecialchars($categoryName) ?></h4>
           </div>
-
           <p><?= nl2br(htmlspecialchars($product['description'])) ?></p>
-        </div>
+          <!-- Quantity Box and Type Dropdown in one row -->
+      <div class="d-flex align-items-start mb-3 gap-3 flex-wrap">
+  <!-- Quantity Box -->
+  <div class="qty-box d-flex align-items-center">
+    <button class="btn btn-sm p-0 border-0 minus-btn">−</button>
+    <input type="number"
+      class="qty-val mx-2"
+      value="1"
+      min="1"
+      max="99"
+      style="width: 40px; border: none; text-align: center;"
+      data-min="1"
+      data-max="99"
+    >
+    <button class="btn btn-sm p-0 border-0 plus-btn">+</button>
+  </div>
 
-        <div class="container d-flex gap-4 mt-4 px-0">
-          <button class="btn-heritage btn-primary add-to-cart-btn" data-product-id="<?php echo $product['id']; ?>" 
-          data-category-id="<?php echo $product['category_id']; ?>">
-            <i class="bi bi-cart-plus me-2"></i>Add to Cart
-          </button>
-          <button 
-            type="button" 
-            class="btn-heritage btn-success buy-now-btn" 
-            data-product-id="<?= $product['id']; ?>" 
-            data-category-id="<?= $product['category_id']; ?>">
-            <i class="bi bi-lightning me-2"></i>Buy Now
-          </button>
+  <!-- Type Dropdown (Matching Design) -->
+  <?php if (!empty($product['types'])): ?>
+    <?php $typesArr = array_filter(array_map('trim', explode(',', $product['types']))); ?>
+    <div class="type-box d-flex align-items-center">
+      <select class="form-select form-select-sm type-select" 
+              style="width: 100px; height: 32px; padding: 2px 6px; font-size: 0.875rem;">
+        <?php foreach ($typesArr as $type): ?>
+          <option value="<?= (int)$type ?>">
+            <?= (int)$type ?> gram<?= ((int)$type == 1000) ? ' (1kg)' : '' ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  <?php endif; ?>
+</div>
+
+
+          <div class="container d-flex gap-4 mt-4 px-0">
+            <button class="btn-heritage btn-primary add-to-cart-btn" data-product-id="<?= $product['id']; ?>"
+              data-category-id="<?= $product['category_id']; ?>"
+              data-product-discount-price="<?= htmlspecialchars($product['discount_price']) ?>"
+              data-product-weight="<?= htmlspecialchars($product['weight']) ?>">
+              <i class="bi bi-cart-plus me-2"></i>Add to Cart
+            </button>
+            <button type="button" class="btn-heritage btn-success buy-now-btn"
+              data-product-id="<?= $product['id']; ?>"
+              data-category-id="<?= $product['category_id']; ?>"
+              data-product-discount-price="<?= htmlspecialchars($product['discount_price']) ?>"
+              data-product-weight="<?= htmlspecialchars($product['weight']) ?>"
+              onclick="if(typeof testBuyNowClick === 'function') { testBuyNowClick(this); } else { console.error('Function not found'); alert('Buy Now function not loaded. Please refresh the page.'); }">
+              <i class="bi bi-lightning me-2"></i>Buy Now
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -288,62 +415,20 @@ try {
   box-shadow: 0 6px 20px rgba(209, 169, 74, 0.4);
 }
 
-/* SMS Style Success Popup */
-.sms-popup {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-  color: white;
-  padding: 20px 25px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
-  z-index: 9999;
-  max-width: 350px;
-  transform: translateX(400px);
-  transition: transform 0.3s ease;
-  border-left: 5px solid #fff;
+/* Ensure Buy Now button is clickable */
+.buy-now-btn {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
-.sms-popup.show {
-  transform: translateX(0);
+.buy-now-btn:hover {
+  cursor: pointer !important;
 }
 
-.sms-popup .sms-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.sms-popup .sms-icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  font-size: 1.2rem;
-}
-
-.sms-popup .sms-title {
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-.sms-popup .sms-message {
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin: 0;
-  opacity: 0.95;
-}
-
-.sms-popup .sms-time {
-  font-size: 0.8rem;
-  opacity: 0.8;
-  margin-top: 8px;
+.buy-now-btn:active {
+  cursor: pointer !important;
 }
 </style>
 
@@ -424,12 +509,11 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <div class="modal-body p-4">
         <form id="customBoxForm">
           <div class="mb-3">
-            <label class="form-label fw-semibold">Describe your custom box preferences:</label>
+            <label class="form-label fw-semibold">If you want any custom text on box:</label>
             <textarea 
               class="form-control" 
               id="customBoxText" 
               rows="4" 
-              placeholder="E.g. 4 ladoos, 2 barfis, sugar-free if possible, special packaging for gift..."
               maxlength="250"
               required
             ></textarea>
@@ -485,7 +569,15 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <form id="placeOrderForm" method="post" class="modal-content border-0 shadow rounded-4 p-4 bg-white">
-      <input type="hidden" name="product_id" id="modal_product_id">
+      <!-- Only one set of hidden inputs at the top of the form -->
+      <input type="hidden" id="modal_product_id" name="product_id">
+      <input type="hidden" id="modal_box_id" name="box_id">
+      <input type="hidden" id="modal_box_name" name="box_name">
+      <input type="hidden" id="modal_box_price" name="box_price">
+      <input type="hidden" id="modal_box_image" name="box_image">
+      <input type="hidden" id="modal_custom_box_text" name="custom_box_text">
+      <input type="hidden" id="modal_quantity" name="quantity">
+      <!-- Remove all payment method radio buttons and their labels from the modal form -->
 
       <div class="modal-body p-0">
         <div class="mb-4">
@@ -497,13 +589,9 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
           </div>
         </div>
-        <input type="hidden" name="box_name" id="modal_box_name">
-<input type="hidden" name="box_price" id="modal_box_price">
-<input type="hidden" name="custom_box_text" id="modal_custom_box_text">
+        
 
 
-
-<input type="hidden" name="quantity" id="modal_quantity" value="1">
 <input type="hidden" name="box_qty" id="modal_number_of_boxes" value="1">
         <div class="mb-3">
           <input type="text" class="form-control border-0 rounded-3" name="address_details" placeholder="Add Detailed Address" required>
@@ -531,18 +619,18 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php endforeach; ?>
         </div>
          
-<!-- calender -->
-<div class="mb-3">
-    <label class="form-label small">Delivery Date</label>
+        <!-- calender -->
+      <div class="mb-3">
+          <label class="form-label small">Delivery Date</label>
 
-  <input
-    type="text"
-    class="form-control border-0 rounded-3"
-    name="delivery_date"
-    id="delivery_date"
-    required
-    placeholder="Select a date">
-</div>
+        <input
+          type="text"
+          class="form-control border-0 rounded-3"
+          name="delivery_date"
+          id="delivery_date"
+          required
+          placeholder="Select a date">
+      </div>
 
 <div class="mb-4">
   <label class="form-label small">Delivery Time</label>
@@ -562,7 +650,7 @@ $timeSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php
 
 
-$stmt = $conn->query("SELECT DISTINCT blocked_date FROM blocked_slots WHERE blocked_date IS NOT NULL AND blocked_date != ''");
+$stmt = $conn->query("SELECT DISTINCT blocked_date FROM blocked_slots WHERE blocked_date IS NOT NULL");
 $blockedDatesRaw = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 // ✅ Encode for JS
@@ -652,12 +740,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<style>
-.blocked-date {
-    font-weight: bold;
-    text-decoration: line-through;
-}
-</style>
+      <style>
+      .blocked-date {
+          font-weight: bold;
+          text-decoration: line-through;
+      }
+      </style>
         <!-- Receiver Info -->
         <div class="mb-3">
           <label class="form-label small">Receiver's Name</label>
@@ -668,122 +756,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <label class="form-label small">Receiver's Phone Number</label>
           <input type="text" class="form-control border-0 rounded-3" name="receiver_phone" value="<?= htmlspecialchars($receiver_phone) ?>" required>
         </div>
-        <div class="mb-4">
-          <label class="form-label small">Receiver's Email</label>
-          <input type="email" class="form-control border-0 rounded-3" name="receiver_email" placeholder="Enter your email" required>
-        </div>
-
-        <!-- Payment Method -->
-        <div class="mb-4">
-          <label class="form-label fw-bold">Payment Method</label>
-          <div class="payment-methods">
-            <!-- Cash on Delivery -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="cod_buynow" value="cod" checked>
-              <label class="payment-method-card" for="cod_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-cash-coin text-success"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">Cash on Delivery</div>
-                  <div class="payment-desc">Pay when you receive your order</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-
-            <!-- Online Payment -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="online_buynow" value="online">
-              <label class="payment-method-card" for="online_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-credit-card text-primary"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">Online Payment</div>
-                  <div class="payment-desc">Credit/Debit Card, UPI, Net Banking</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-
-            <!-- UPI Payment -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="upi_buynow" value="upi">
-              <label class="payment-method-card" for="upi_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-phone text-warning"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">UPI Payment</div>
-                  <div class="payment-desc">Google Pay, PhonePe, Paytm, BHIM</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-
-            <!-- Net Banking -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="netbanking_buynow" value="netbanking">
-              <label class="payment-method-card" for="netbanking_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-bank text-success"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">Net Banking</div>
-                  <div class="payment-desc">All major banks</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-
-            <!-- Bank Transfer -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="banktransfer_buynow" value="banktransfer">
-              <label class="payment-method-card" for="banktransfer_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-building text-info"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">Bank Transfer</div>
-                  <div class="payment-desc">NEFT, RTGS, IMPS</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-
-            <!-- Wallet Payment -->
-            <div class="payment-option">
-              <input type="radio" class="btn-check" name="payment_method" id="wallet_buynow" value="wallet">
-              <label class="payment-method-card" for="wallet_buynow">
-                <div class="payment-icon">
-                  <i class="bi bi-wallet2 text-info"></i>
-                </div>
-                <div class="payment-details">
-                  <div class="payment-name">Wallet Payment</div>
-                  <div class="payment-desc">Pay using your wallet balance</div>
-                </div>
-                <div class="payment-fee">₹0</div>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Payment Details (shown for online/UPI) -->
-        <div id="paymentDetailsBuyNow" class="mb-4" style="display: none;">
-          <div class="alert alert-warning">
-            <h6><i class="bi bi-shield-check me-2"></i>Secure Payment</h6>
-            <p class="mb-0 small">Your payment will be processed securely. You will be redirected to the payment gateway after placing the order.</p>
-          </div>
-        </div>
-
-        <!-- COD Details (shown for COD) -->
-        <div id="codDetailsBuyNow" class="mb-4">
-          <div class="alert alert-success">
-            <h6><i class="bi bi-info-circle me-2"></i>Cash on Delivery</h6>
-            <p class="mb-0 small">Pay the exact amount when your order is delivered. No additional charges.</p>
-          </div>
-        </div>
+       
+       
 
         <!-- Submit Button -->
         <div class="d-grid">
@@ -800,141 +774,58 @@ document.getElementById('placeOrderForm').addEventListener('submit', function (e
   e.preventDefault();
 
   const form = this;
-  const quantityInput = document.getElementById('modal_quantity');
-  const boxInput = document.getElementById('modal_number_of_boxes');
-  const currentQty = parseInt(quantityInput.value) || 1;
-  const currentBoxes = parseInt(boxInput.value) || 1;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+  // Prevent duplicate fetch
+  if (window.orderSubmitting) return;
+  window.orderSubmitting = true;
 
   const formData = new FormData(form);
-  console.log('Payment method:', formData.get('payment_method'));
-  console.log('Form data entries:');
-  for (let [key, value] of formData.entries()) {
-    console.log(key + ': ' + value);
-  }
 
   fetch('inc/place_order', {
     method: 'POST',
     body: formData
   })
-    .then(res => {
-      console.log('Response status:', res.status);
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
-      console.log('Response data:', data);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+      window.orderSubmitting = false;
       if (data.success) {
-        console.log('Payment redirect URL:', data.payment_redirect);
-        if (data.payment_redirect) {
-          // Redirect to payment gateway
-          Swal.fire({
-            icon: 'info',
-            title: 'Payment Required',
-            text: data.message,
-            confirmButtonText: 'Proceed to Payment',
-            allowOutsideClick: false
-          }).then(() => {
-            console.log('Redirecting to:', data.payment_redirect);
-            window.location.href = data.payment_redirect;
-          });
-        } else {
-          // COD or wallet payment completed
-          Swal.fire({
-            icon: 'success',
-            title: 'Order Placed!',
-            html: `<p>${data.message}</p><strong>Delivery: Within 2 days</strong>`,
-            confirmButtonText: 'OK',
-            timer: 4000,
-            timerProgressBar: true,
-          }).then(() => {
-            // Show SMS popup and redirect
-            showSMSSuccess(data.message, data.order_code);
-            setTimeout(() => {
-              window.location.href = 'cart?payment=success&order_code=' + data.order_code + '&amount=' + data.subtotal;
-            }, 1000);
-          });
-        }
-
-      } else if (Array.isArray(data.errors)) {
         Swal.fire({
-          icon: 'warning',
-          title: 'Please fix the following:',
-          html: '<ul style="text-align:left;">' + data.errors.map(e => `<li>${e}</li>`).join('') + '</ul>',
+          icon: 'success',
+          title: 'Order Placed!',
+          html: `<p>Your order has been placed successfully!</p><strong>Order Code: ${data.order_code || ''}</strong><br>Delivery: Within 2 days`,
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3500,
+          timerProgressBar: true
         });
-
-      } else if (data.error && data.error.includes('Minimum order amount')) {
-        // Show quantity update prompt
-        Swal.fire({
-          icon: 'warning',
-          title: 'Minimum Order Amount Required',
-          html: `
-            <strong>${data.error}</strong>
-            <p>Please increase quantity to meet the minimum order amount.</p>
-            <div class="d-flex justify-content-center align-items-center">
-              <button id="decQtyBtn" class="btn btn-outline-secondary px-3 me-2">−</button>
-              <input type="number" id="newQtyInput" class="form-control text-center" value="${currentQty + 1}" min="${currentQty + 1}" style="width: 80px;">
-              <button id="incQtyBtn" class="btn btn-outline-secondary px-3 ms-2">+</button>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: 'Save',
-          cancelButtonText: 'Cancel',
-          customClass: {
-            confirmButton: 'btn btn-warning',
-            cancelButton: 'btn btn-secondary'
-          },
-          buttonsStyling: false,
-          didOpen: () => {
-            const input = document.getElementById('newQtyInput');
-            const incBtn = document.getElementById('incQtyBtn');
-            const decBtn = document.getElementById('decQtyBtn');
-
-            incBtn.addEventListener('click', () => {
-              input.value = parseInt(input.value) + 1;
-            });
-
-            decBtn.addEventListener('click', () => {
-              if (parseInt(input.value) > currentQty) {
-                input.value = parseInt(input.value) - 1;
-              }
-            });
-          },
-          preConfirm: () => {
-            const newQty = parseInt(document.getElementById('newQtyInput').value);
-            if (!newQty || newQty <= currentQty) {
-              Swal.showValidationMessage(`Quantity must be greater than ${currentQty}`);
-              return false;
-            }
-            return newQty;
-          }
-
-        }).then(result => {
-          if (result.isConfirmed && result.value) {
-            const newQty = result.value;
-
-            // ✅ Only update quantity; keep boxInput value as user entered it
-            quantityInput.value = newQty;
-
-            // ❌ DON'T TOUCH this line anymore:
-            // boxInput.value = newQty;
-
-            // ✅ Re-submit the form after slight delay
-            setTimeout(() => form.dispatchEvent(new Event('submit')), 100);
-          }
-        });
-
+        setTimeout(() => {
+          form.style.display = 'none';
+          window.location.href = 'index';
+        }, 1800);
+        return;
       } else {
         Swal.fire({
           icon: 'error',
-          title: 'Oops...',
-          text: data.error || 'An unexpected error occurred.',
+          title: 'Order Failed',
+          text: data.message || 'Something went wrong. Please try again.'
         });
       }
     })
     .catch(err => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+      window.orderSubmitting = false;
       Swal.fire({
         icon: 'error',
         title: 'Request Failed',
-        text: err.message || 'Something went wrong while connecting to server.',
+        text: err.message || 'Something went wrong.',
       });
     });
 });
@@ -956,75 +847,174 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
     });
 });
 </script>
+
+
   
 
 
 
 <script>
+console.log('Script starting...');
 let customBoxText = '';
 let isBuyNow = false;
 let buyNowProductId = null;
 let buyNowBoxId = null;
-let buyNowQty = 1;
+      let selectedQty = 1;
 let selectedBoxName = '';
 let selectedBoxPrice = '';
 
-document.querySelectorAll('.buy-now-btn').forEach(button => {
-  button.addEventListener('click', () => {
-    const productId = button.dataset.productId;
-    const categoryId = button.dataset.categoryId;
+console.log('Variables initialized');
 
-    isBuyNow = true;
-    buyNowProductId = productId;
-    customBoxText = '';
-    buyNowQty = 1;
+// Buy Now button functionality - Multiple approaches to ensure it works
+function setupBuyNowButtons() {
+  console.log('Setting up Buy Now buttons...');
+  const buyNowButtons = document.querySelectorAll('.buy-now-btn');
+  console.log('Found', buyNowButtons.length, 'Buy Now buttons');
+  
+  buyNowButtons.forEach((button, index) => {
+    console.log('Setting up button', index, button);
+    
+    // Remove any existing event listeners
+    button.removeEventListener('click', handleBuyNowClick);
+    
+    // Add new event listener
+    button.addEventListener('click', handleBuyNowClick);
+    
+    // Also add a direct onclick as backup
+    button.onclick = handleBuyNowClick;
+  });
+}
 
+// Try multiple ways to ensure the script runs
+document.addEventListener('DOMContentLoaded', setupBuyNowButtons);
+window.addEventListener('load', setupBuyNowButtons);
+
+// Also try immediately if DOM is already loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupBuyNowButtons);
+} else {
+  setupBuyNowButtons();
+}
+
+// Test if SweetAlert2 is available
+console.log('Testing SweetAlert2 availability...');
+if (typeof Swal !== 'undefined') {
+  console.log('SweetAlert2 is available');
+} else {
+  console.log('SweetAlert2 is NOT available');
+}
+
+// Test if we can find the button
+setTimeout(() => {
+  console.log('Checking for buttons after 1 second...');
+  const buttons = document.querySelectorAll('.buy-now-btn');
+  console.log('Found buttons:', buttons.length);
+  buttons.forEach((btn, i) => {
+    console.log(`Button ${i}:`, btn);
+    console.log(`Button ${i} dataset:`, btn.dataset);
+  });
+}, 1000);
+
+function handleBuyNowClick(e) {
+  console.log('Buy Now button clicked via event listener!');
+  e.preventDefault();
+  
+  const productId = this.dataset.productId;
+  const categoryId = this.dataset.categoryId;
+  const price = parseFloat('<?= $product['discount_price'] ?>');
+  
+  console.log('Product ID:', productId, 'Category ID:', categoryId, 'Price:', price);
+  
+  // Set global variables
+  isBuyNow = true;
+  buyNowProductId = productId;
+  customBoxText = '';
+  buyNowQty = 1;
+
+  // Fetch minimum order amount and boxes
+  Promise.all([
+    fetch('inc/fetch_settings.php?type=min_order').then(res => res.json()).catch(() => ({ min_order_amount: 1500 })),
     fetch('inc/fetch_boxes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `category_id=${categoryId}`
-    })
-    .then(res => res.json())
-    .then(boxes => {
-      const boxOptions = document.getElementById('box-options');
+    }).then(res => res.json()).catch(() => [])
+  ])
+  .then(([settings, boxes]) => {
+    console.log('Settings:', settings, 'Boxes:', boxes);
+    const minAmount = parseFloat(settings.min_order_amount || 1500);
+    const productPrice = price;
+    
+    // Check if current order meets minimum amount
+    const currentTotal = productPrice * buyNowQty;
+    
+    if (currentTotal < minAmount) {
+      // Show quantity adjustment popup
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Minimum Order Amount Required',
+        html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity Increased!`,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        customClass: { popup: 'sms-toast' }
+      });
+      return;
+    }
+    showBoxPopup(boxes);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Something went wrong. Please try again.'
+    });
+  });
+}
 
-      boxOptions.innerHTML = `
-        <div class="text-center mb-4">
-          <h5 class="fw-bold text-dark">Select a Sweet Box</h5>
-          <p class="text-muted">Choose from our pre-made boxes or create your own custom box</p>
-        </div>
-        <div class="row g-3 justify-content-center">
-          ${boxes.map(box => `
-            <div class="col-md-3 col-sm-4 col-6">
-              <div class="box-card text-center rounded border p-3 h-100" style="cursor: pointer; transition: all 0.3s ease;" data-box-id="${box.id}" data-box-name="${box.box_name}" data-box-price="${box.box_price}">
-                <img src="admin/${box.box_image}" alt="${box.box_name}" class="img-fluid rounded mb-2" style="height: 80px; width: 80px; object-fit: cover;">
-                <div class="box_title fw-semibold" title="${box.box_name}">${box.box_name}</div>
-                <div class="box_price mt-1" style="background-color: #fef3c7; border-radius: 6px; padding: 4px 8px; display: inline-block; font-size: 12px;">₹ ${box.box_price}</div>
-              </div>
-            </div>
-          `).join('')}
-          <div class="col-md-3 col-sm-4 col-6">
-            <div class="box-card text-center rounded border border-warning p-3 h-100" style="cursor: pointer; background: #fff8e1; transition: all 0.3s ease;" data-box-id="custom">
-              <div class="d-flex align-items-center justify-content-center mb-2" style="height: 80px; background: #fffde7; border-radius: 8px;">
-                <i class="bi bi-pencil-square text-warning fs-3"></i>
-            </div>
-              <div class="box_title text-warning fw-semibold">Custom Box</div>
-              <div class="box_price text-muted" style="font-size: 12px;">Write your own</div>
+function showBoxPopup(boxes) {
+  const boxOptions = document.getElementById('box-options');
+
+  boxOptions.innerHTML = `
+    <div class="text-center mb-4">
+      <h5 class="fw-bold text-dark">Select a Sweet Box</h5>
+      <p class="text-muted">Choose from our pre-made boxes or create your own custom box</p>
+    </div>
+    <div class="row g-3 justify-content-center">
+      ${boxes.map(box => `
+        <div class="col-md-3 col-sm-4 col-6">
+          <div class="box-card text-center rounded border p-3 h-100" style="cursor: pointer; transition: all 0.3s ease;" data-box-id="${box.id}" data-box-name="${box.box_name}" data-box-price="${box.box_price}">
+            <img src="admin/${box.box_image}" alt="${box.box_name}" class="img-fluid rounded mb-2" style="height: 80px; width: 80px; object-fit: cover;">
+            <div class="box_title fw-semibold" title="${box.box_name}">${box.box_name}</div>
+            <div class="box_price mt-1" style="background-color: #fef3c7; border-radius: 6px; padding: 4px 8px; display: inline-block; font-size: 12px;">₹ ${box.box_price}</div>
           </div>
         </div>
+      `).join('')}
+      <div class="col-md-3 col-sm-4 col-6">
+        <div class="box-card text-center rounded border border-warning p-3 h-100" style="cursor: pointer; background: #fff8e1; transition: all 0.3s ease;" data-box-id="custom">
+          <div class="d-flex align-items-center justify-content-center mb-2" style="height: 80px; background: #fffde7; border-radius: 8px;">
+            <i class="bi bi-pencil-square text-warning fs-3"></i>
         </div>
-        <div class="text-center mt-4">
-          <button id="confirmBoxBtn" class="btn btn-warning px-4 py-2 fw-semibold me-3" disabled>
-            <i class="bi bi-arrow-right me-2"></i>Continue to Checkout
-          </button>
-          <button id="skipBoxBtn" class="btn btn-outline-secondary px-4 py-2">
-            <i class="bi bi-x-circle me-2"></i>Skip Box
-          </button>
-        </div>
-      `;
+          <div class="box_title text-warning fw-semibold">Custom Box</div>
+          <div class="box_price text-muted" style="font-size: 12px;">Write your own</div>
+      </div>
+    </div>
+    </div>
+    <div class="text-center mt-4">
+      <button id="confirmBoxBtn" class="btn btn-warning px-4 py-2 fw-semibold me-3" disabled>
+        <i class="bi bi-arrow-right me-2"></i>Continue to Checkout
+      </button>
+      <button id="skipBoxBtn" class="btn btn-outline-secondary px-4 py-2">
+        <i class="bi bi-x-circle me-2"></i>Skip Box
+      </button>
+    </div>
+  `;
 
-      const modal = new bootstrap.Modal(document.getElementById('boxSelectModal'));
-      modal.show();
+  const modal = new bootstrap.Modal(document.getElementById('boxSelectModal'));
+  modal.show();
 
       let selectedBoxId = null;
 
@@ -1050,81 +1040,141 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
               const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('boxSelectModal'));
               bootstrapModal.hide();
 
-              const { isConfirmed, value: text } = await Swal.fire({
-                title: 'Customize Your Box',
-                input: 'textarea',
-                inputLabel: 'Enter your custom box preferences',
-                inputPlaceholder: 'e.g. 3 Ladoo, 2 Barfi, Sugar-free items...',
-                inputAttributes: {
-                  'aria-label': 'Custom box message',
-                  maxlength: 250
-                },
-                showCancelButton: true,
-                confirmButtonText: 'Save',
-                cancelButtonText: 'Cancel',
-                inputValidator: value => {
-                  if (!value.trim()) return 'Please enter something!';
-                }
-              });
-
-              if (isConfirmed && text.trim()) {
-                customBoxText = text.trim();
+              // Create custom text input modal
+              const customModal = document.createElement('div');
+              customModal.className = 'modal fade';
+              customModal.id = 'customTextModal';
+              customModal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Customize Your Box</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <label class="form-label">If you want any custom text on box:</label>
+                      <textarea id="customTextInput" class="form-control" rows="3" maxlength="250" placeholder="Enter your custom message..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-warning" id="saveCustomTextBtn">Save</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+              
+              document.body.appendChild(customModal);
+              const customModalInstance = new bootstrap.Modal(customModal);
+              customModalInstance.show();
+              
+                                            document.getElementById('saveCustomTextBtn').addEventListener('click', () => {
+                 const text = document.getElementById('customTextInput').value.trim();
+                 if (!text) {
+                   Swal.fire({
+                     icon: 'error',
+                     title: 'Invalid Input',
+                     text: 'Please enter something!'
+                   });
+                   return;
+                 }
+                
+                customBoxText = text;
                 buyNowQty = 1;
                 document.getElementById('confirmBoxBtn').disabled = false;
+                customModalInstance.hide();
+                document.body.removeChild(customModal);
                 bootstrapModal.show();
-              } else {
+              });
+              
+              customModal.addEventListener('hidden.bs.modal', () => {
+                if (document.body.contains(customModal)) {
+                  document.body.removeChild(customModal);
+                }
                 option.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
                 selectedBoxId = null;
                 customBoxText = '';
                 document.getElementById('confirmBoxBtn').disabled = true;
-              }
-
-            } else {
-              const { isConfirmed, value: qty } = await Swal.fire({
-                title: 'How many boxes Need?',
-                html: `<input type="number" id="qtyInput" class="swal2-input" placeholder="Enter quantity" min="1" step="1" value="1" style="width: 300px;">`,
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Confirm',
-                cancelButtonText: 'Cancel',
-                preConfirm: () => {
-                  const qtyVal = parseInt(document.getElementById('qtyInput').value);
-                  if (!qtyVal || qtyVal <= 0) {
-                    Swal.showValidationMessage('Please enter a valid quantity');
-                  }
-                  return qtyVal;
-                },
-                didOpen: () => {
-                  document.getElementById('qtyInput')?.focus();
-                }
               });
 
-              if (isConfirmed) {
-                buyNowQty = qty;
+            } else {
+              // Create quantity input modal
+              const qtyModal = document.createElement('div');
+              qtyModal.className = 'modal fade';
+              qtyModal.id = 'qtyModal';
+              qtyModal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">How many boxes Need?</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <input type="number" id="qtyInput" class="form-control" placeholder="Enter quantity" min="1" step="1" value="1">
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-warning" id="confirmQtyBtn">Confirm</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+              
+              document.body.appendChild(qtyModal);
+              const qtyModalInstance = new bootstrap.Modal(qtyModal);
+              qtyModalInstance.show();
+              
+              document.getElementById('qtyInput').focus();
+              
+                                            document.getElementById('confirmQtyBtn').addEventListener('click', () => {
+                 const qtyVal = parseInt(document.getElementById('qtyInput').value);
+                 if (!qtyVal || qtyVal <= 0) {
+                   Swal.fire({
+                     icon: 'error',
+                     title: 'Invalid Quantity',
+                     text: 'Please enter a valid quantity'
+                   });
+                   return;
+                 }
+                
+                window.buyNowBoxQty = qtyVal;
                 document.getElementById('confirmBoxBtn').disabled = false;
-              } else {
+                qtyModalInstance.hide();
+                document.body.removeChild(qtyModal);
+              });
+              
+              qtyModal.addEventListener('hidden.bs.modal', () => {
+                if (document.body.contains(qtyModal)) {
+                  document.body.removeChild(qtyModal);
+                }
                 option.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
                 selectedBoxId = null;
-                buyNowQty = 1;
+                window.buyNowBoxQty = 1;
                 document.getElementById('confirmBoxBtn').disabled = true;
-              }
+              });
             }
           });
         });
 
         document.getElementById('confirmBoxBtn').onclick = () => {
-          if (isBuyNow) {
-            buyNowBoxId = selectedBoxId;
+          if (window.isBuyNow) {
+            window.buyNowBoxId = selectedBoxId;
             modal.hide();
-
             setTimeout(() => {
-              document.getElementById('modal_product_id').value = buyNowProductId;
-              document.getElementById('modal_box_name').value = selectedBoxName;
-              document.getElementById('modal_box_price').value = selectedBoxPrice;
-              document.getElementById('modal_custom_box_text').value = customBoxText;
-              document.getElementById('modal_quantity').value = buyNowQty;
-              document.getElementById('modal_number_of_boxes').value = buyNowQty; // ✅ set here
-
+              // Always get product quantity from main input or buyNowProductQty
+              let productQty = window.buyNowProductQty || 1;
+              const qtyInput = document.querySelector('.qty-val');
+              if (qtyInput) {
+                productQty = parseInt(qtyInput.value, 10) || 1;
+              }
+              document.getElementById('modal_product_id').value = window.buyNowProductId;
+              document.getElementById('modal_box_id').value = window.buyNowBoxId;
+              document.getElementById('modal_box_name').value = window.selectedBoxName;
+              document.getElementById('modal_box_price').value = window.selectedBoxPrice;
+              document.getElementById('modal_box_image').value = window.selectedBoxImage;
+              document.getElementById('modal_custom_box_text').value = window.customBoxText || '';
+              document.getElementById('modal_quantity').value = productQty;
+              document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Only box quantity
+              // Always show the checkout modal
               const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
               checkoutModal.show();
             }, 300);
@@ -1132,16 +1182,16 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
         };
 
         document.getElementById('skipBoxBtn').onclick = () => {
-          if (isBuyNow) {
-            buyNowBoxId = 'none';
+          if (window.isBuyNow) {
+            window.buyNowBoxId = 'none';
             customBoxText = '';
-            buyNowQty = 1;
+            window.buyNowBoxQty = 1;
             modal.hide();
 
             setTimeout(() => {
-              document.getElementById('modal_product_id').value = buyNowProductId;
-              document.getElementById('modal_quantity').value = buyNowQty;
-              document.getElementById('modal_number_of_boxes').value = buyNowQty; // ✅ set here too
+              document.getElementById('modal_product_id').value = window.buyNowProductId;
+              document.getElementById('modal_quantity').value = window.buyNowProductQty || window.buyNowQty;
+              document.getElementById('modal_number_of_boxes').value = 0; // Explicitly set to 0 when skipping
 
               const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
               checkoutModal.show();
@@ -1149,9 +1199,19 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
           }
         };
       }, 100);
-    });
-  });
-});
+    }
+
+
+// Test if we can find the button
+setTimeout(() => {
+  const button = document.querySelector('.buy-now-btn');
+  if (button) {
+    console.log('Found Buy Now button:', button);
+    console.log('Button onclick:', button.onclick);
+  } else {
+    console.log('Buy Now button not found');
+  }
+}, 1000);
 </script>
 
 
@@ -1177,17 +1237,7 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
 
   </main>
 
-  <!-- SMS Style Success Popup -->
-  <div id="smsPopup" class="sms-popup">
-    <div class="sms-header">
-      <div class="sms-icon">
-        <i class="bi bi-check-circle"></i>
-      </div>
-      <h6 class="sms-title">Order Successful!</h6>
-    </div>
-    <p class="sms-message" id="smsMessage">Your order has been placed successfully.</p>
-    <div class="sms-time" id="smsTime"></div>
-  </div>
+
 
 <?php include ('inc/footer.php'); ?>
 
@@ -1201,8 +1251,7 @@ document.querySelectorAll('.buy-now-btn').forEach(button => {
 <!-- Main JS File -->
 <script src="assets/js/main.js"></script>
 
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 <script>
 document.querySelectorAll('.add-to-cart-btn').forEach(function(addToCartBtn) {
@@ -1337,19 +1386,52 @@ document.querySelectorAll('.add-to-cart-btn').forEach(function(addToCartBtn) {
         });
 
         document.getElementById('confirmBoxBtn').onclick = () => {
-          submitToCart(productId, selectedQty, selectedBoxId, modal, customBoxText, selectedQty, selectedBoxName, selectedBoxPrice);
+          // Get selected type/gram from dropdown if present
+          let selectedType = 1000;
+          const typeSelect = document.querySelector('.type-select');
+          let isUnit = false;
+          if (typeof window.productWeightType !== 'undefined' && window.productWeightType === 'unit') {
+            isUnit = true;
+          } else if (typeSelect && typeSelect.options.length === 1 && typeSelect.options[0].text.toLowerCase().includes('unit')) {
+            isUnit = true;
+          }
+          if (isUnit) selectedType = 1;
+          else if (typeSelect) selectedType = parseInt(typeSelect.value, 10) || 1000;
+          // Get product quantity from the main input
+          let productQty = 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
+          submitToCart(productId, productQty, selectedBoxId, modal, customBoxText, selectedQty, selectedBoxName, selectedBoxPrice, selectedType);
         };
 
         document.getElementById('skipBoxBtn').onclick = () => {
-          submitToCart(productId, 1, 'none', modal, '', 0, '', 0);
+          let selectedType = 1000;
+          const typeSelect = document.querySelector('.type-select');
+          let isUnit = false;
+          if (typeof window.productWeightType !== 'undefined' && window.productWeightType === 'unit') {
+            isUnit = true;
+          } else if (typeSelect && typeSelect.options.length === 1 && typeSelect.options[0].text.toLowerCase().includes('unit')) {
+            isUnit = true;
+          }
+          if (isUnit) selectedType = 1;
+          else if (typeSelect) selectedType = parseInt(typeSelect.value, 10) || 1000;
+          // Get product quantity from the main input
+          let productQty = 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
+          submitToCart(productId, productQty, 'none', modal, '', 0, '', 0, selectedType);
         };
       }, 100);
     });
   });
 });
 
-function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0) {
-  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}`;
+function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1, boxName = '', boxPrice = 0, selectedType = 1000) {
+  const payload = `product_id=${productId}&quantity=${qty}&box_id=${boxId}&custom_text=${encodeURIComponent(customText)}&box_qty=${boxQty}&box_name=${encodeURIComponent(boxName)}&box_price=${boxPrice}&selected_type=${selectedType}`;
     
   fetch('inc/add_to_cart', {
     method: 'POST',
@@ -1370,7 +1452,7 @@ function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1,
           toast: true,
           position: 'top-end',
           didClose: () => {
-            location.reload();
+            window.location.href = 'cart';
           }
         });
         modal.hide();
@@ -1391,8 +1473,7 @@ function submitToCart(productId, qty, boxId, modal, customText = '', boxQty = 1,
             fetch('inc/add_to_cart', {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `${payload}&as_guest=1`
-            })
+              body: `${payload}&as_guest=1`            })
             .then(res => res.text())
             .then(guestData => {
               const guestTrimmed = guestData.trim();
@@ -1435,93 +1516,420 @@ document.getElementById('placeOrderForm').addEventListener('submit', function (e
   e.preventDefault();
 
   const form = this;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+  // Prevent duplicate fetch
+  if (window.orderSubmitting) return;
+  window.orderSubmitting = true;
+
   const formData = new FormData(form);
 
   fetch('inc/place_order', {
     method: 'POST',
     body: formData
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Order Placed! Your Order will be delivered after 2 Days',
-        text: data.message,
-        confirmButtonText: 'OK',
-      }).then(() => {
-        window.location.reload(); // You can redirect instead
-      });
-
-    } else if (data.errors) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Validation Error',
-        html: '<ul style="text-align:left;">' + data.errors.map(e => `<li>${e}</li>`).join('') + '</ul>',
-        confirmButtonText: 'Got it',
-      });
-
-    } else {
+    .then(res => res.json())
+    .then(data => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+      window.orderSubmitting = false;
+      if (data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Placed!',
+          html: `<p>Your order has been placed successfully!</p><strong>Order Code: ${data.order_code || ''}</strong><br>Delivery: Within 2 days`,
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3500,
+          timerProgressBar: true
+        });
+        setTimeout(() => {
+          form.style.display = 'none';
+          window.location.href = 'index';
+        }, 1800);
+        return;
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Order Failed',
+          text: data.message || 'Something went wrong. Please try again.'
+        });
+      }
+    })
+    .catch(err => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+      window.orderSubmitting = false;
       Swal.fire({
         icon: 'error',
-        title: 'Oops...',
-        text: data.error || 'An unexpected error occurred.',
-        confirmButtonText: 'Close',
+        title: 'Request Failed',
+        text: err.message || 'Something went wrong.',
       });
-    }
-  })
-  .catch(err => {
-    Swal.fire({
-      icon: 'error',
-      title: 'Request Failed',
-      text: err.message || 'Something went wrong.',
     });
-  });
 });
 
 
 
-  // SMS Style Success Popup Function
+  // Success function (no popup)
   function showSMSSuccess(message, orderCode = '') {
-    const smsPopup = document.getElementById('smsPopup');
-    const smsMessage = document.getElementById('smsMessage');
-    const smsTime = document.getElementById('smsTime');
-    
-    // Set message
-    smsMessage.textContent = message;
-    
-    // Set current time
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-IN', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
-    smsTime.textContent = timeString;
-    
-    // Show popup
-    smsPopup.classList.add('show');
-    
-    // Auto hide after 5 seconds
-    setTimeout(() => {
-      smsPopup.classList.remove('show');
-    }, 5000);
+    console.log('Order Success:', message, 'Order Code:', orderCode);
   }
 
-  // Show SMS popup for successful orders
+  // Log successful orders
   if (window.location.search.includes('payment=success')) {
     const urlParams = new URLSearchParams(window.location.search);
     const orderCode = urlParams.get('order_code') || '';
     const amount = urlParams.get('amount') || '';
     
-    const message = orderCode ? 
-      `Order #${orderCode} placed successfully! Amount: ₹${amount}` : 
-      'Order placed successfully!';
-    
-    showSMSSuccess(message, orderCode);
+    console.log('Order Success:', orderCode, 'Amount:', amount);
   }
 </script>
 
+<!-- Final Buy Now function definition -->
+<script>
+console.log('Final script loading...');
+
+// Ensure the function is available globally
+if (typeof window.testBuyNowClick !== 'function') {
+  console.log('Defining testBuyNowClick function...');
+  window.testBuyNowClick = function(button) {
+    console.log('Buy Now button clicked!');
+    
+    const productId = button.dataset.productId;
+    const categoryId = button.dataset.categoryId;
+    const price = parseFloat('<?= $product['discount_price'] ?? 0 ?>');
+    
+    console.log('Product ID:', productId, 'Category ID:', categoryId, 'Price:', price);
+    
+    // Set global variables
+    window.isBuyNow = true;
+    window.buyNowProductId = productId;
+    window.customBoxText = '';
+    window.buyNowQty = 1;
+
+    // Fetch minimum order amount and boxes
+    Promise.all([
+      fetch('inc/fetch_settings.php?type=min_order').then(res => res.json()).catch(() => ({ min_order_amount: 1500 })),
+      fetch('inc/fetch_boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `category_id=${categoryId}`
+      }).then(res => res.json()).catch(() => [])
+    ])
+    .then(([settings, boxes]) => {
+      console.log('Settings:', settings, 'Boxes:', boxes);
+      const minAmount = parseFloat(settings.min_order_amount || 1500);
+      const productPrice = price;
+      
+      // Check if current order meets minimum amount
+      const currentTotal = productPrice * window.buyNowQty;
+      
+      if (currentTotal < minAmount) {
+        // Show quantity adjustment popup
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Minimum Order Amount Required',
+          html: `Your order total is ₹${currentTotal.toFixed(2)}. Minimum order is ₹${minAmount.toFixed(2)}.\nQuantity बढ़ाएं।`,
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          customClass: { popup: 'sms-toast' }
+        });
+        return;
+      }
+      showBoxPopup(boxes);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Something went wrong. Please try again.'
+      });
+    });
+  };
+  console.log('Function defined successfully:', typeof window.testBuyNowClick);
+} else {
+  console.log('Function already exists:', typeof window.testBuyNowClick);
+}
+
+// Function to show box selection popup
+function showBoxPopup(boxes) {
+  const boxOptions = document.getElementById('box-options');
+
+  boxOptions.innerHTML = `
+    <div class="text-center mb-4">
+      <h5 class="fw-bold text-dark">Select a Sweet Box</h5>
+      <p class="text-muted">Choose from our pre-made boxes or create your own custom box</p>
+    </div>
+    <div class="row g-3 justify-content-center">
+      ${boxes.map(box => `
+        <div class="col-md-3 col-sm-4 col-6">
+          <div class="box-card text-center rounded border p-3 h-100" style="cursor: pointer; transition: all 0.3s ease;" data-box-id="${box.id}" data-box-name="${box.box_name}" data-box-price="${box.box_price}">
+            <img src="admin/${box.box_image}" alt="${box.box_name}" class="img-fluid rounded mb-2" style="height: 80px; width: 80px; object-fit: cover;">
+            <div class="box_title fw-semibold" title="${box.box_name}">${box.box_name}</div>
+            <div class="box_price mt-1" style="background-color: #fef3c7; border-radius: 6px; padding: 4px 8px; display: inline-block; font-size: 12px;">₹ ${box.box_price}</div>
+          </div>
+        </div>
+      `).join('')}
+      <div class="col-md-3 col-sm-4 col-6">
+        <div class="box-card text-center rounded border border-warning p-3 h-100" style="cursor: pointer; background: #fff8e1; transition: all 0.3s ease;" data-box-id="custom">
+          <div class="d-flex align-items-center justify-content-center mb-2" style="height: 80px; background: #fffde7; border-radius: 8px;">
+            <i class="bi bi-pencil-square text-warning fs-3"></i>
+        </div>
+          <div class="box_title text-warning fw-semibold">Custom Box</div>
+          <div class="box_price text-muted" style="font-size: 12px;">Write your own</div>
+      </div>
+    </div>
+    </div>
+    <div class="text-center mt-4">
+      <button id="confirmBoxBtn" class="btn btn-warning px-4 py-2 fw-semibold me-3" disabled>
+        <i class="bi bi-arrow-right me-2"></i>Continue to Checkout
+      </button>
+      <button id="skipBoxBtn" class="btn btn-outline-secondary px-4 py-2">
+        <i class="bi bi-x-circle me-2"></i>Skip Box
+      </button>
+    </div>
+  `;
+
+  const modal = new bootstrap.Modal(document.getElementById('boxSelectModal'));
+  modal.show();
+
+  let selectedBoxId = null;
+
+  setTimeout(() => {
+    document.querySelectorAll('.box-card').forEach(option => {
+      option.addEventListener('click', async () => {
+        // Remove previous selections
+        document.querySelectorAll('.box-card').forEach(o => {
+          o.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
+          o.style.transform = 'scale(1)';
+        });
+        
+        // Highlight selected option
+        option.classList.add('border-primary', 'border-3', 'shadow', 'selected');
+        option.style.transform = 'scale(1.05)';
+        
+        selectedBoxId = option.dataset.boxId;
+
+        window.selectedBoxName = option.querySelector('.box_title')?.textContent.trim() || '-';
+        window.selectedBoxPrice = option.querySelector('.box_price')?.textContent.replace(/[^\d.]/g, '') || '0';
+
+        if (selectedBoxId === 'custom') {
+          const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('boxSelectModal'));
+          bootstrapModal.hide();
+
+          const { isConfirmed, value: text } = await Swal.fire({
+            title: 'Customize Your Box',
+            input: 'textarea',
+            inputLabel: 'If you want any custom text on box:',
+            inputAttributes: {
+              'aria-label': 'Custom box message',
+              maxlength: 250
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Save',
+            cancelButtonText: 'Cancel',
+            inputValidator: value => {
+              if (!value.trim()) return 'Please enter something!';
+            }
+          });
+
+          if (isConfirmed && text.trim()) {
+            window.customBoxText = text.trim();
+            window.buyNowBoxQty = 1; // Custom box quantity
+            document.getElementById('confirmBoxBtn').disabled = false;
+            bootstrapModal.show();
+          } else {
+            option.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
+            selectedBoxId = null;
+            window.customBoxText = '';
+            document.getElementById('confirmBoxBtn').disabled = true;
+          }
+
+        } else {
+          const { isConfirmed, value: qty } = await Swal.fire({
+            title: 'How many boxes Need?',
+            html: `<input type="number" id="qtyInput" class="swal2-input" placeholder="Enter quantity" min="1" step="1" value="1" style="width: 300px;">`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Confirm',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+              const qtyVal = parseInt(document.getElementById('qtyInput').value);
+              if (!qtyVal || qtyVal <= 0) {
+                Swal.showValidationMessage('Please enter a valid quantity');
+              }
+              return qtyVal;
+            },
+            didOpen: () => {
+              document.getElementById('qtyInput')?.focus();
+            }
+          });
+
+          if (isConfirmed) {
+            window.buyNowBoxQty = qty; // Save as box quantity (don't change product quantity)
+            document.getElementById('confirmBoxBtn').disabled = false;
+          } else {
+            option.classList.remove('border-primary', 'border-3', 'shadow', 'selected');
+            selectedBoxId = null;
+            window.buyNowBoxQty = 1; // Reset box quantity
+            document.getElementById('confirmBoxBtn').disabled = true;
+          }
+        }
+      });
+    });
+
+    document.getElementById('confirmBoxBtn').onclick = () => {
+      if (window.isBuyNow) {
+        window.buyNowBoxId = selectedBoxId;
+        modal.hide();
+        setTimeout(() => {
+          // Always get product quantity from main input or buyNowProductQty
+          let productQty = window.buyNowProductQty || 1;
+          const qtyInput = document.querySelector('.qty-val');
+          if (qtyInput) {
+            productQty = parseInt(qtyInput.value, 10) || 1;
+          }
+          document.getElementById('modal_product_id').value = window.buyNowProductId;
+          document.getElementById('modal_box_id').value = window.buyNowBoxId;
+          document.getElementById('modal_box_name').value = window.selectedBoxName;
+          document.getElementById('modal_box_price').value = window.selectedBoxPrice;
+          document.getElementById('modal_box_image').value = window.selectedBoxImage;
+          document.getElementById('modal_custom_box_text').value = window.customBoxText || '';
+          document.getElementById('modal_quantity').value = productQty;
+          document.getElementById('modal_number_of_boxes').value = window.buyNowBoxQty; // Only box quantity
+          // Always show the checkout modal
+          const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+          checkoutModal.show();
+        }, 300);
+      }
+    };
+
+    document.getElementById('skipBoxBtn').onclick = () => {
+      if (window.isBuyNow) {
+        window.buyNowBoxId = 'none';
+        window.customBoxText = '';
+        window.buyNowBoxQty = 0; // No boxes when skipped
+        modal.hide();
+
+        setTimeout(() => {
+          document.getElementById('modal_product_id').value = window.buyNowProductId;
+          document.getElementById('modal_quantity').value = window.buyNowProductQty || window.buyNowQty;
+          document.getElementById('modal_number_of_boxes').value = 0; // Explicitly set to 0 when skipping
+
+          const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+          checkoutModal.show();
+        }, 300);
+      }
+    };
+  }, 100);
+}
+
+// Test if we can find the button
+setTimeout(() => {
+  const button = document.querySelector('.buy-now-btn');
+  if (button) {
+    console.log('Found Buy Now button:', button);
+    console.log('Button onclick:', button.onclick);
+  } else {
+    console.log('Buy Now button not found');
+  }
+}, 1000);
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const typeSelect = document.querySelector('.type-select');
+  const qtyInput = document.querySelector('.qty-val');
+  const minusBtn = document.querySelector('.minus-btn');
+  const plusBtn = document.querySelector('.plus-btn');
+  const dynamicPriceEl = document.querySelector('.dynamic-price');
+  const addToCartBtn = document.querySelector('.add-to-cart-btn');
+  const buyNowBtn = document.querySelector('.buy-now-btn');
+  const discountPrice = parseFloat(addToCartBtn.dataset.productDiscountPrice);
+  const baseWeight = 1000; // 1kg
+  let minAmount = 1500; // Default, will fetch from backend
+
+  // Fetch minimum order amount from backend
+  fetch('inc/fetch_settings.php?type=min_order')
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.min_order_amount) {
+        minAmount = parseFloat(data.min_order_amount);
+      }
+    });
+
+  function getTotalPrice() {
+    let selectedType = typeSelect ? parseInt(typeSelect.value, 10) : baseWeight;
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    let totalGrams = selectedType * qty;
+    let totalPrice = (totalGrams / 1000) * discountPrice;
+    return totalPrice;
+  }
+
+  function updatePrice() {
+    dynamicPriceEl.innerText = getTotalPrice().toFixed(2);
+  }
+
+  if (typeSelect) {
+    typeSelect.addEventListener('change', updatePrice);
+  }
+  qtyInput.addEventListener('input', updatePrice);
+  minusBtn.addEventListener('click', () => {
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    qtyInput.value = Math.max(1, qty - 1);
+    updatePrice();
+  });
+  plusBtn.addEventListener('click', () => {
+    let qty = parseInt(qtyInput.value, 10) || 1;
+    qtyInput.value = Math.min(99, qty + 1);
+    updatePrice();
+  });
+  updatePrice();
+
+  // Remove SweetAlert2 popup on quantity/type change (handled above)
+
+  // Buy Now button logic
+  if (buyNowBtn) {
+    buyNowBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const total = getTotalPrice();
+      if (total < minAmount) {
+        showError('Minimum order amount', 'Please enter minimum order amount: ₹' + minAmount);
+        return;
+      }
+      if (typeof testBuyNowClick === 'function') {
+        testBuyNowClick(this);
+      }
+    });
+  }
+});
+</script>
+
+
+
 </body>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Always clean up modal backdrops and body state when any modal is closed
+  document.querySelectorAll('.modal').forEach(function(modalEl) {
+    modalEl.addEventListener('hidden.bs.modal', function() {
+      // Remove all modal backdrops
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      // Remove modal-open class and inline styles
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    });
+  });
+});
+</script>
 
 </html>
