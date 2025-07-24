@@ -38,6 +38,8 @@ if (!isset($_SESSION['admin_id'])) {
     <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
     <!-- custom Css-->
     <link href="assets/css/custom.min.css" rel="stylesheet" type="text/css" />
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 
 </head>
 
@@ -351,11 +353,52 @@ $sn = 1;
 
     <script>
 function deleteTestimonial(id) {
-    if (confirm("Are you sure you want to delete this Testimonial?")) {
-        window.location.href = 'inc/delete_testimonial?id=' + id;
-    }
+    Swal.fire({
+        title: '<div style="display:flex;align-items:center;"><div style="background:linear-gradient(135deg,#ffc107 0%,#ffecb3 100%);color:#856404;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:1.5rem;"><i class="bi bi-trash"></i></div><div><div style="font-weight:700;font-size:1.1rem;color:#856404;">Delete Testimonial?</div><div style="font-size:0.95rem;opacity:0.85;color:#856404;">Are you sure you want to delete this testimonial? This action cannot be undone.</div></div></div>',
+        iconHtml: '<i class="bi bi-chat-dots-fill"></i>',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+        customClass: {
+            popup: 'sms-popup',
+            confirmButton: 'btn btn-warning rounded-pill px-4 text-dark',
+            cancelButton: 'btn btn-danger rounded-pill px-4',
+            title: 'w-100',
+        },
+        background: 'linear-gradient(135deg,#fffbe6 0%,#fff3cd 100%)',
+        buttonsStyling: false,
+        focusCancel: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: '<div style="display:flex;align-items:center;"><div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:1.5rem;"><i class="bi bi-check-circle"></i></div><div><div style="font-weight:700;font-size:1.1rem;">Deleted!</div><div style="font-size:0.95rem;opacity:0.85;">Testimonial deleted successfully.</div></div></div>',
+                showConfirmButton: false,
+                timer: 1200,
+                background: 'linear-gradient(135deg,#e9fbe7 0%,#e0f7fa 100%)',
+                customClass: {
+                    popup: 'sms-popup',
+                    title: 'w-100',
+                },
+                iconHtml: '<i class="bi bi-chat-dots-fill"></i>',
+            });
+            setTimeout(function() {
+                window.location.href = 'inc/delete_testimonial?id=' + encodeURIComponent(id);
+            }, 1200);
+        }
+    });
 }
 </script>
+<style>
+.sms-popup {
+    border-radius: 15px !important;
+    box-shadow: 0 10px 30px rgba(255, 193, 7, 0.15) !important;
+    border-left: 5px solid #ffc107 !important;
+    max-width: 400px;
+    padding: 20px 25px !important;
+    font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -449,6 +492,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <!-- App js -->
     <script src="assets/js/app.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 
 

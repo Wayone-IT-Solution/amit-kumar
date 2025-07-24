@@ -38,7 +38,8 @@ if (!isset($_SESSION['admin_id'])) {
     <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
     <!-- custom Css-->
     <link href="assets/css/custom.min.css" rel="stylesheet" type="text/css" />
-
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -468,14 +469,35 @@ if (!isset($_SESSION['admin_id'])) {
                     });
                 });
 
-                function deletePincode(id) {
-                    if (confirm('Are you sure you want to delete this pincode?')) {
-                        window.location.href = 'inc/delete_pincode.php?id=' + id;
-                    }
-                }
+                // SweetAlert2 JS
+                document.addEventListener('DOMContentLoaded', function () {
+                    Swal.fire({
+                        title: 'Welcome!',
+                        text: 'This is a SweetAlert2 example. Click the button to see a confirmation dialog.',
+                        icon: 'info',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            popup: 'sms-popup',
+                            confirmButton: 'btn btn-warning rounded-pill px-4 text-dark',
+                            cancelButton: 'btn btn-danger rounded-pill px-4',
+                            title: 'w-100',
+                        },
+                        background: 'linear-gradient(135deg,#fffbe6 0%,#fff3cd 100%)',
+                        buttonsStyling: false,
+                        focusCancel: true
+                    });
+                });
             </script>
-
-
+            <style>
+                .sms-popup {
+                    border-radius: 15px !important;
+                    box-shadow: 0 10px 30px rgba(255, 193, 7, 0.15) !important;
+                    border-left: 5px solid #ffc107 !important;
+                    max-width: 400px;
+                    padding: 20px 25px !important;
+                    font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+                }
+            </style>
 
 
             <!-- JAVASCRIPT -->
